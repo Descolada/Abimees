@@ -1,0 +1,84 @@
+$(document).ready(function() {
+	if ($("#ctl00_pc_LabOrderModuleNewOrder_patientAndCustomerControl_testData_setSelector_Arrow").is(':visible') == true) {
+		setTitle("Labor");
+		document.getElementById('ctl00_pc_LabOrderModuleNewOrder_patientAndCustomerControl_testData_setSelector_Arrow').click();
+		CreatePanel();
+	} else if ($("#ctl00_pc_archive_chkPacs").is(':visible') == true) {
+		setTitle("Pildipank");
+		if ($('#ctl00_pc_archive_chkPacs').is(":checked") == false) {
+		$("#ctl00_pc_archive_chkPacs").attr("checked",true); }
+		$("#ctl00_pc_archive_search").trigger("click");
+		/*document.getElementById('ctl00_pc_archive_search').click();*/
+	} else if ($("#ctl00_pc_RISOrderModuleControlsOrderucOrder_patientAndCustomerControl_exams_pickExamination").is(':visible')) {
+		setTitle("Radioloogia");
+		$("#ctl00_pc_RISOrderModuleControlsOrderucOrder_patientAndCustomerControl_exams_pickExamination").trigger("click");
+	} 
+	window.onbeforeunload = function() {
+		var res = document.title.split(" - ");
+		document.title = res[0] + " - " + res[2];
+	};
+
+});
+function setTitle(newTitle) {
+	var res = document.title.split(" - ");
+	document.title = res[0] + " - " + newTitle + " - " + res[1];
+}
+
+
+function CreatePanel() {
+add_html = '<div id="kiirpaneel" style="position: absolute; background-color: #f1f1f1; border: 1px solid #d3d3d3; text-align:center;">
+<!-- Include a header DIV with the same name as the draggable DIV, followed by "header" -->
+<div id="mydivheader" style="padding: 10px; cursor: move; background-color:#2196F3; color:#fff;">Kiirtellimused</div>
+<p><div id="CBC-5Diff" class="singletellimus">CBC-5Diff</div></p>
+<p><div id="CHEM-5" class="singletellimus">CHEM-5</div></p>
+<p><div id="Uriin" class="singletellimus">Uriin</div></p>
+</div>';
+
+if ($("#kiirpaneel").is(':visible') == true) {
+	$("#kiirpaneel").remove();
+}
+$("#ctl00_pc_LabOrderModuleNewOrder_patientAndCustomerControl_testData_setSelector").parent().parent().after(add_html);
+
+dragElement(document.getElementById("kiirpaneel"));
+$(".singletellimus").click(function () {
+	if (this.id == "CBC-5Diff") {
+		$("span:contains('Hematoloogia ja Glükohemoglobiin')").trigger("click");
+		$("#ctl00_pc_popup_LabOrderModuleServiceSetForm_groups_ctl00_tests_1").attr("checked",true);
+	} else {
+		alert(this.id);
+	}
+	/*ctl00_pc_popup_LabOrderModuleServiceSetForm_groups_ctl00_tests_1
+	ctl00_pc_popup_LabOrderModuleServiceSetForm_proceed*/
+});
+}
+
+function dragElement(elmnt) {
+	var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+	if (document.getElementById(elmnt.id + "header")) {
+		document.getElementById(elmnt.id + "header").onmousedown = dragMouseDown;
+	} else {
+		elmnt.onmousedown = dragMouseDown;
+	}
+	function dragMouseDown(e) {
+		e = e || window.event;
+		e.preventDefault();
+		pos3 = e.clientX;
+		pos4 = e.clientY;
+		document.onmouseup = closeDragElement;
+		document.onmousemove = elementDrag;
+	}
+	function elementDrag(e) {
+	e = e || window.event;
+	e.preventDefault();
+	pos1 = pos3 - e.clientX;
+	pos2 = pos4 - e.clientY;
+	pos3 = e.clientX;
+	pos4 = e.clientY;
+	elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+	elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+	}
+	function closeDragElement() {
+	document.onmouseup = null;
+	document.onmousemove = null;
+	}
+}
