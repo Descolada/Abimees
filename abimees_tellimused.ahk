@@ -1,6 +1,6 @@
-﻿#NoEnv
+#NoEnv
 #SingleInstance force
-;#NoTrayIcon
+#NoTrayIcon
 SendMode Input  ; Recommended for new scripts due to its superior speed and reliability.
 CoordMode, Mouse, Client ; koordinaadid relatiivselt akna suhtes
 CoordMode, Pixel, Client 
@@ -104,11 +104,6 @@ StringCount(str, match) {
 	return ErrorLevel
 }
 
-;StringCount(Haystack, String, RegexPattern := false) {
-;    RegExReplace(Haystack, (RegexPattern ? "" : "\Q") . String . (RegexPattern ? "" : "\E"),, ChrCt) ; Case sensitive!
-;    Return ChrCt
-;}
-
 SendJavascriptRaw(fileName) {
 	FileRead, code, %A_ScriptDir%\Lib\Javascript\%fileName%
 	SendInput, !d
@@ -128,42 +123,15 @@ SendJavascript(fileName) {
 		SendInput, j
 		Clip("avascript:$.getScript('https://cdn.jsdelivr.net/gh/Descolada/TellimusedJS@latest/" . fileName . "');")
 		Send, {Enter}
-		;SetKeyDelay, 10, -1
-		;ClipSaved := ClipboardAll ; save the entire clipboard to the variable ClipSaved
-		;clipboard := ""
-		;SendInput, !d
-		;Sleep, 40
-		;SendInput, j
-	
-		;clipboard := "avascript:$.getScript('https://cdn.jsdelivr.net/gh/Descolada/TellimusedJS@latest/" . fileName . "');"
-		;ClipWait, 2
-	
-		;if (!ErrorLevel)         ; If NOT ErrorLevel, ClipWait found data on the clipboard
-		;	Send, ^v{Enter}             ; paste the text
-		;Sleep, 40
-
-		;clipboard := ClipSaved   
-		;ClipSaved =              ; Free the memory in case the clipboard was very large.
 	} else {
 		SetKeyDelay, 100, 50
-		;ClipSaved := ClipboardAll ; save the entire clipboard to the variable ClipSaved
-		;clipboard := ""
 		Sleep, 200
 		SendEvent, !d
 		Sleep, 100
 		SendEvent, j
 		Clip("avascript:$.getScript('https://cdn.jsdelivr.net/gh/Descolada/TellimusedJS@latest/" . fileName . "');")
-		;clipboard := "avascript:$.getScript('https://cdn.jsdelivr.net/gh/Descolada/TellimusedJS@latest/" . fileName . "');"
-		;ClipWait, 1              
-	
-		;if (!ErrorLevel)         ; If NOT ErrorLevel, ClipWait found data on the clipboard
-		;	SendEvent, ^v             ; paste the text
 		Sleep, 100
 		Send, {Enter}
-		;Sleep, 40
-
-		;clipboard := ClipSaved   
-		;ClipSaved =              ; Free the memory in case the clipboard was very large.
 		SetKeyDelay, 10, -1
 	}
 }
