@@ -144,8 +144,8 @@ UpdateListBox() {
 UpdatePatientList() {
 	global maxPatients, patientList := []
 	Loop, %maxPatients% {
-		IniRead pt, %A_ScriptDir%\abimees_settings.ini, ViewedPatients, patient%A_index%
-		if pt 
+		IniRead pt, %A_ScriptDir%\abimees_settings.ini, ViewedPatients, patient%A_index%, %A_Space%
+		if (pt && pt != A_Space && pt != "ERROR") 
 			patientList.Push(pt)
 	}
 }
@@ -154,8 +154,8 @@ UpdateViewedPatients() {
 	IniRead maxPatients, %A_ScriptDir%\abimees_settings.ini, ViewedPatients, maxPatients, 15
 	patientList := []
 	Loop, %maxPatients% {
-		IniRead pt, %A_ScriptDir%\abimees_settings.ini, ViewedPatients, patient%A_index%
-		if pt 
+		IniRead pt, %A_ScriptDir%\abimees_settings.ini, ViewedPatients, patient%A_index%, %A_Space%
+		if (pt && pt != A_Space && pt != "ERROR") 
 			patientList.Push(pt)
 	}
 	ControlGetText, patientName, ThunderRT6TextBox19, Haiguslugu ahk_class ThunderRT6FormDC
