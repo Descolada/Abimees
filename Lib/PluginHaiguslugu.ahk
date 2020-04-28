@@ -1,9 +1,20 @@
-﻿CreateHaiguslooAbivahend() {
-	global plugins
+﻿klProcessLink:
+	global kiirlingid
+	switch (A_ThisMenuItem) {
+		case "":
+			return
+		default:
+			linkUrl := kiirlingid[A_ThisMenuItem]
+			Run, %linkUrl%
+	}
+	return
+
+CreateHaiguslooAbivahend() {
+	global plugins, kiirlingid
 	SetWinDelay, -1
 
 	WinGet, PID, PID, % "ahk_id " . owner:=WinExist() 
-
+	IniWrite, 0, abimees_settings.ini, General, HaigusluguReady
 	windowName := "Abimees"
 	if (plugins.LastViewed) {
 		ik := UpdateViewedPatients()
@@ -17,6 +28,8 @@
 	button_h := 30
 
 	GUI, Haiguslugu:New, +ToolWindow +Owner%owner% +Hwndowned -SysMenu
+	if (kiirlingid != {})
+		Gui, Haiguslugu:Add, Button, gButKiirlingid x0 y0 w%button_w% h%button_h%, Kiirlingid
 	Gui, Haiguslugu:Add, Button, gButLaboriTellimus x0 y60 w%button_w% h%button_h%, Labori tellimus
 	Gui, Haiguslugu:Add, Button, gButRadioloogiaTellimus x0 y90 w%button_w% h%button_h%, Radiol. tellimus
 	Gui, Haiguslugu:Add, Button, gButFunktsionaaldgn x0 y120 w%button_w% h%button_h%, Funktsionaaldgn
@@ -31,12 +44,22 @@
 	GUI, Haiguslugu:Show, x%w_adjusted_x% y%y_haigus% w%window_w% h%adjusted_h_haigus%, %windowName%
 	WinActivate, Haiguslugu
 
+	global HaiguslooAbivahendHwnd := owned
 	global resetAbimees = 1
 	OnLocationChangeMonitor(owner, owned, PID) ; INIT
 
+	IniWrite, 1, abimees_settings.ini, General, HaigusluguReady
+
 	WinWaitClose % "ahk_id " . owner ; ... or until the owner window does not exist
 	Gui, Haiguslugu:Destroy
+	
+	if WinExist("Patsient ahk_class ThunderRT6FormDC")
+		WinClose, Patsient ahk_class ThunderRT6FormDC
 	return
+	
+	ButKiirlingid:
+		Menu, Kiirlingid, Show
+		return
 
 	ButRavipaevik:
 		FindAndOpenDocument("Ravipäevik")
@@ -51,14 +74,14 @@
 		return
 
 	ButUuringud:
-		WinActivate, Haiguslugu
-		WinWaitActive, Haiguslugu,,1
+		WinActivate, Haiguslugu ahk_class ThunderRT6FormDC
+		WinWaitActive, Haiguslugu ahk_class ThunderRT6FormDC,,1
 		FiltreeriDokumendid("u")
 		return
 
 	ButKirjeldused:
-		WinActivate, Haiguslugu
-		WinWaitActive, Haiguslugu,,1
+		WinActivate, Haiguslugu ahk_class ThunderRT6FormDC
+		WinWaitActive, Haiguslugu ahk_class ThunderRT6FormDC,,1
 		FiltreeriDokumendid("k")
 		return
 
@@ -80,10 +103,10 @@
 }
 
 KlikiTellimuseNupule(downRepeats) {
-	WinActivate, Haiguslugu
+	WinActivate, Haiguslugu ahk_class ThunderRT6FormDC
 	Sleep, 40
 	SetControlDelay -1 ; muudab ControlClicki usaldusväärsemaks
-	ControlClick, ThunderRT6CommandButton42, Haiguslugu,,,, NA
+	ControlClick, ThunderRT6CommandButton42, Haiguslugu ahk_class ThunderRT6FormDC,,,, NA
 	Sleep,40
 	Send,{Down %downRepeats%}
 	Send,{Enter}
@@ -91,26 +114,26 @@ KlikiTellimuseNupule(downRepeats) {
 }
 
 GetIsikukood() {
-	WinActivate, Haiguslugu
+	WinActivate, Haiguslugu ahk_class ThunderRT6FormDC
 	SetControlDelay -1 ; muudab ControlClicki usaldusväärsemaks
-	ControlClick, ThunderRT6CommandButton72, Haiguslugu,,,, NA
-	WinWaitActive, Isikuandmed,,2
-	ControlGetText, output, ThunderRT6TextBox9, Isikuandmed
-	WinClose, Isikuandmed
+	ControlClick, ThunderRT6CommandButton72, Haiguslugu ahk_class ThunderRT6FormDC,,,, NA
+	WinWaitActive, Isikuandmed ahk_class ThunderRT6FormDC,,2
+	ControlGetText, output, ThunderRT6TextBox9, Isikuandmed ahk_class ThunderRT6FormDC
+	WinClose, Isikuandmed ahk_class ThunderRT6FormDC
 	return output
 }
 
 FiltreeriDokumendid(selectionChar) {
 	SetControlDelay -1
 	; Kontrolli kas nimekiri on filtreeritud, kui on siis võta see maha
-	ControlGet, filtered, Checked,, ThunderRT6CheckBox1, Haiguslugu
+	ControlGet, filtered, Checked,, ThunderRT6CheckBox1, Haiguslugu ahk_class ThunderRT6FormDC
 	if filtered {
-		ControlClick, ThunderRT6CheckBox1, Haiguslugu,,,, NA
+		ControlClick, ThunderRT6CheckBox1, Haiguslugu ahk_class ThunderRT6FormDC,,,, NA
 		Sleep, 100
 	}
 
 	; Filtreeri Kirjelduse järgi
-	ControlClick, ThunderRT6CommandButton12, Haiguslugu,,,, NA
+	ControlClick, ThunderRT6CommandButton12, Haiguslugu ahk_class ThunderRT6FormDC,,,, NA
 	Sleep, 40
 	Send, {%selectionChar%}{Enter}
 }
@@ -121,10 +144,21 @@ FindAndOpenDocument(doc, backupDoc = "") {
 		return
 	}
 
-	WinActivate, Haiguslugu
-	WinWaitActive, Haiguslugu,,1
+	WinActivate, Haiguslugu ahk_class ThunderRT6FormDC
+	WinWaitActive, Haiguslugu ahk_class ThunderRT6FormDC,,1
 	FiltreeriDokumendid("k")
-	Sleep, 100
+	; wait until Filtered button is clicked	
+	startTime := A_TickCount
+	Loop {
+		ControlGet, filteredChecked, Checked,, ThunderRT6CheckBox1, Haiguslugu ahk_class ThunderRT6FormDC
+		if ((A_TickCount-startTime)>1000)
+			break
+		else
+			Sleep, 40
+	} Until (filteredChecked)
+	if (!filteredChecked)
+		return
+
 	;WaitTextExist(searchText, click=40, clickCount=1, offsetX=0, nResult=1, maxTime=5000, inBrowser=1)
 	if (!WaitTextExist(doc,200,,,,200,0)) {
 		if (backupDoc != "") {
@@ -134,27 +168,27 @@ FindAndOpenDocument(doc, backupDoc = "") {
 			}
 		}
 	}
-	if WinActive("Valimine tabelist") {
-		ControlClick, ThunderRT6CommandButton7, Valimine tabelist,,,, NA ; Sulge "Valimine tabelist"
+	if WinActive("Valimine tabelist ahk_class ThunderRT6FormDC") {
+		ControlClick, ThunderRT6CommandButton7, Valimine tabelist ahk_class ThunderRT6FormDC,,,, NA ; Sulge "Valimine tabelist"
 		Sleep, 100
 	}
-	ControlClick, ThunderRT6CommandButton33, Haiguslugu,,,, NA ; kliki Täpsemalt nupule
+	ControlClick, ThunderRT6CommandButton33, Haiguslugu ahk_class ThunderRT6FormDC,,,, NA ; kliki Täpsemalt nupule
 
 	WinWaitNotActive, ahk_id %winID%,,1
 	if ErrorLevel
 		return
-	if WinActive("Haiguslugu") {
-		ControlGetText, noBut, Button2, Haiguslugu
+	if WinActive("Haiguslugu ahk_class ThunderRT6FormDC") {
+		ControlGetText, noBut, Button2, Haiguslugu ahk_class ThunderRT6FormDC
 		if (noBut == "&No") {
-			ControlClick, Button2, Haiguslugu,,,, NA
+			ControlClick, Button2, Haiguslugu ahk_class ThunderRT6FormDC,,,, NA
 			Sleep, 100
 		}
 	}
 
-	if WinActive("Valimine tabelist") {
-		ControlClick, ThunderRT6CommandButton7, Valimine tabelist,,,, NA ; Sulge "Valimine tabelist"
-		If WinExist("Kirjelduse sisestamine")
-			WinActivate, Kirjelduse sisestamine
+	if WinActive("Valimine tabelist ahk_class ThunderRT6FormDC") {
+		ControlClick, ThunderRT6CommandButton7, Valimine tabelist ahk_class ThunderRT6FormDC,,,, NA ; Sulge "Valimine tabelist"
+		If WinExist("Kirjelduse sisestamine ahk_class ThunderRT6FormDC")
+			WinActivate, Kirjelduse sisestamine ahk_class ThunderRT6FormDC
 	}
 	return
 }

@@ -1,11 +1,12 @@
 ﻿global DoubleClickTime := DllCall("GetDoubleClickTime", "UInt")
-global ExperimentalMode := True
-global AHKPath := "Y:\AutoHotkey_1.1.32.00\AutoHotkeyU32.exe"
+global ExperimentalMode := False
+global AHKPath := A_ScriptDir . "\AutoHotkeyU32.exe"
 global currentOsakond := "Does not yet exist"
 global defaultOsakond
 global visitedBrowsers := []
 global browserName := "Edge"
 global plugins := {}
+global kiirlingid := {}
 IniRead, output, abimees_settings.ini, Plugins, Haiguslugu, 0
 plugins.Haiguslugu := output
 IniRead, output, abimees_settings.ini, Plugins, Ester, 0
@@ -32,6 +33,7 @@ ImageLibrary["Anamnees"] := "|<>*127$50.40000000100000000c0000000+/7CmlllYH8+GmW
 ImageLibrary["Epikriis"] := "|<>*127$61.y60M00q0BUNU00003000AM00001U006AnvDDaqRgv6PBgqPSAqrXBarvBi6PAlanP1arXBXNXNhanPNaqzVbqSTBanNk00M0A00002"
 ImageLibrary["Etappepikriis"] := "|<>*127$71.z0000001g0P1UM000000M0030k000000k0061nntwSTBgvNzX0qPBanPlaqs6DgqPxar3BakAnNgq3Bj6P7UNanNgqPPAqrwNxwyDDanNgs0031U0M00008"
 ImageLibrary["AvaTabel"] := "|<>*128$19.zzzzzzzzzw006003001U00k00M00A006003001U00k00M00A007zzz"
+ImageLibrary["Unfilter"] := "|<>*143$21.zzzs00000000000E2030k7zzsknL33pkABQ0nr03nk0AQ03nk0GG00G002E00G003k4"
 ImageLibrary.Edge := {}, ImageLibrary.Chrome := {}
 ImageLibrary.Chrome["ValiBlankett"] := "|<>*146$67.UU2EE800E00EE108400808YE0U4200404GMwY5mDDYnbR8WG398aGW+8cF914YG9Vt4IF4UWIF4l0WA4WEG98WIEF63l8C4wWFDAo"
 ImageLibrary.Edge["ValiBlankett"] := "|<>*174$65.VUBUUk0100120E11U0206OA0U2200A0AYFt8DYSyPCztaKEN9BogaWONhUWoH9XtAsnH158YH46MlgY6OH8hAAV1tg7aynHDRo"
@@ -281,3 +283,4 @@ ImageLibrary.Reload := "|<Chrome>*184$14.3wFzgsTM3y1z0zk0A0303s1q0MsQ7y0z2|<Edge
 ImageLibrary.Chrome["Reload"] := "|<Chrome>*184$14.3wFzgsTM3y1z0zk0A0303s1q0MsQ7y0z2"
 ImageLibrary.Edge["Reload"] := "|<Edge>*160$14.C43Vlc6G0g0C01U0M0601k0o09U6C70z2"
 ImageLibrary.IE11["Reload"] := "|<IE11>*193$10.0U31yTtXA8k70w3MNzVsU"
+ImageLibrary.Edge_virtual["Reload"] := "|<>*153$16.D20QC3EAN0N00g03U0600M01U0700o02M0Mk31ks1y2"
