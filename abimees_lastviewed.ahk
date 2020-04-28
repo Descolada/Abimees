@@ -11,7 +11,7 @@ DetectHiddenWindows, On
 
 global patientList := []
 global maxPatients := 15
-IniRead maxPatients, %A_ScriptDir%\abimees_settings.ini, ViewedPatients, maxPatients
+IniRead maxPatients, %A_ScriptDir%\abimees_settings.ini, ViewedPatients, maxPatients, 15
 
 UpdatePatientList()
 
@@ -22,14 +22,14 @@ OnMessage( MsgNum, "ShellMessage" )
 
 SetWinDelay, -1
 
-WinGet, PID, PID, % "ahk_id " . owner:=WinExist("Ester II Statsionaar") 
-WinGetPos, x_haigus, y_haigus, w_haigus, h_haigus, Ester II Statsionaar
+WinGet, PID, PID, % "ahk_id " . owner:=WinExist("Ester II Statsionaar ahk_class ThunderRT6FormDC") 
+WinGetPos, x_haigus, y_haigus, w_haigus, h_haigus, Ester II Statsionaar ahk_class ThunderRT6FormDC
 window_w := 120
-window_h := 200
+window_h := maxPatients * 14
 x_coord := A_ScreenWidth - window_w - 10
 y_coord := 0
 
-GUI, Main:New, +ToolWindow +Owner%owner% +Hwndowned -SysMenu
+GUI, Main:New, +ToolWindow +Owner%owner% +Hwndowned
 
 ptArr := ""
 for i,e in patientList {
@@ -38,11 +38,11 @@ for i,e in patientList {
 }
 ptArr := RTrim(ptArr, "|")
 
-Gui, Main:Add, ListBox, x0 y0 w%window_w% h%window_h% gLBLastViewed vLBLastViewed, %ptArr%
-	
-GUI, Main:Show, x%x_coord% y%y_coord% w%window_w% h%window_h%, Viimati vaadatud
+Gui, Main:Add, ListBox, x0 y0 w%window_w% r%maxPatients% gLBLastViewed vLBLastViewed, %ptArr%
+GuiControlGet, posLastViewed, Pos, LBLastViewed
+GUI, Main:Show, x%x_coord% y%y_coord% w%window_w% h%posLastViewedH%, Vaadatud pt-d
 
-WinActivate, Ester II Statsionaar
+WinActivate, Ester II Statsionaar ahk_class ThunderRT6FormDC
 
 WinWaitClose % "ahk_id " . owner ; ... or until the owner window does not exist
 
@@ -55,24 +55,24 @@ LBLastViewed:
 		if A_EventInfo {
 			pt := StrSplit(patientList[A_EventInfo], "|")
 			ik := pt[2]
-			WinActivate, Ester II Statsionaar
-			WinWaitActive, Ester II Statsionaar
+			WinActivate, Ester II Statsionaar ahk_class ThunderRT6FormDC
+			WinWaitActive, Ester II Statsionaar ahk_class ThunderRT6FormDC
 			Sleep, 40
 			SetControlDelay -1 ; muudab ControlClicki usaldusväärsemaks
-			ControlClick, ThunderRT6CommandButton10, Ester II Statsionaar,,,, NA
-			WinWaitActive, Patsient
+			ControlClick, ThunderRT6CommandButton10, Ester II Statsionaar ahk_class ThunderRT6FormDC,,,, NA
+			WinWaitActive, Patsient ahk_class ThunderRT6FormDC
 			Sleep, 40
-			ControlGetText, butNo, Button2, Patsient
+			ControlGetText, butNo, Button2, Patsient ahk_class ThunderRT6FormDC
 			if (butNo == "&No") {
-				ControlClick, Button2, Patsient,,,, NA
-				WinWaitActive, Patsient
+				ControlClick, Button2, Patsient ahk_class ThunderRT6FormDC,,,, NA
+				WinWaitActive, Patsient ahk_class ThunderRT6FormDC
 				Sleep, 40
 			}
-			ControlSetText, ThunderRT6TextBox3, %ik%, Patsient
+			ControlSetText, ThunderRT6TextBox3, %ik%, Patsient ahk_class ThunderRT6FormDC
 			Sleep, 200
-			ControlClick, ThunderRT6CommandButton3, Patsient,,,, NA
+			ControlClick, ThunderRT6CommandButton3, Patsient ahk_class ThunderRT6FormDC,,,, NA
 			Sleep, 200
-			ControlClick, ThunderRT6CommandButton3, Patsient,,,, NA
+			ControlClick, ThunderRT6CommandButton3, Patsient ahk_class ThunderRT6FormDC,,,, NA
 		}
 	}
 	return
@@ -111,9 +111,19 @@ ShellMessage( wParam,lParam )	; Gets all Shell Hook Messages
 		WinGet, wExe, ProcessName, ahk_id %wId%	; wExe is Window Execute
 
 		if InStr(wTitle, "Haiguslugu") {
-			WinWaitActive, Haiguslugu
-			Sleep, 2000
-			ControlGetText, patientName, ThunderRT6TextBox19, Haiguslugu
+			WinWaitActive, Haiguslugu ahk_class ThunderRT6FormDC
+			IniRead, haiguslugu, abimees_settings.ini, Plugins, Haiguslugu, 0
+			if (haiguslugu) {
+				startTime := A_TickCount
+				Loop {
+					IniRead, ready, abimees_settings.ini, General, HaigusluguReady
+					Sleep, 200
+				} Until ((A_TickCount-startTime) > 3000 || ready)
+				IniWrite, 0, abimees_settings.ini, General, HaigusluguReady
+			} else {
+				UpdateViewedPatients()
+			}
+			ControlGetText, patientName, ThunderRT6TextBox19, Haiguslugu ahk_class ThunderRT6FormDC
 			UpdatePatientList()
 			UpdateListBox()
 		}
@@ -140,17 +150,49 @@ UpdatePatientList() {
 	}
 }
 
+UpdateViewedPatients() {
+	IniRead maxPatients, %A_ScriptDir%\abimees_settings.ini, ViewedPatients, maxPatients, 15
+	patientList := []
+	Loop, %maxPatients% {
+		IniRead pt, %A_ScriptDir%\abimees_settings.ini, ViewedPatients, patient%A_index%
+		if pt 
+			patientList.Push(pt)
+	}
+	ControlGetText, patientName, ThunderRT6TextBox19, Haiguslugu ahk_class ThunderRT6FormDC
+
+	; check if patient is already in list
+	existing_i := -1
+	for i,e in patientList {
+		if InStr(e, patientName)
+			existing_i := i, break
+	}
+			
+	if (existing_i == -1) {
+		ik := GetIsikukood()
+		if !ik
+			return
+		patientList.InsertAt(1,patientName . "|" . ik)
+		if patientList.Length() > maxPatients
+			patientList.Pop()
+	} else {
+		patientList.InsertAt(1,patientList[existing_i])
+		patientList.RemoveAt(existing_i+1)
+	}
+			
+	Loop, %maxPatients% {
+		v := patientList[A_index]
+		IniWrite, %v%, %A_ScriptDir%\abimees_settings.ini, ViewedPatients, patient%A_index%
+	}
+	pt := StrSplit(patientList[1],"|")
+	return pt[2]
+}
+
 GetIsikukood() {
-	if !WinExist("Abimees")
-		WinWait, Abimees
-	WinActivate, Haiguslugu
-	WinWaitActive, Haiguslugu
-	Sleep, 40
+	WinActivate, Haiguslugu ahk_class ThunderRT6FormDC
 	SetControlDelay -1 ; muudab ControlClicki usaldusväärsemaks
-	ControlClick, ThunderRT6CommandButton72, Haiguslugu,,,, NA
-	WinWaitActive, Isikuandmed
-	Sleep, 40
-	ControlGetText, output, ThunderRT6TextBox9, Isikuandmed
-	WinClose, Isikuandmed
+	ControlClick, ThunderRT6CommandButton72, Haiguslugu ahk_class ThunderRT6FormDC,,,, NA
+	WinWaitActive, Isikuandmed ahk_class ThunderRT6FormDC,,2
+	ControlGetText, output, ThunderRT6TextBox9, Isikuandmed ahk_class ThunderRT6FormDC
+	WinClose, Isikuandmed ahk_class ThunderRT6FormDC
 	return output
 }

@@ -10,6 +10,7 @@ SetTitleMatchMode, 2
 
 #include <GlobalVariables>
 #include <FindText>
+#include <Clip>
 
 global currentPage := ""
 
@@ -35,15 +36,15 @@ ShellMessage( wParam,lParam )	; Gets all Shell Hook Messages
 		WinGetTitle, activeTitle, A
 		WinGet, activeExe, ProcessName, A
 		if (InStr(activeTitle, "Edge") or InStr(activeTitle, "Internet") or InStr(activeTitle, "Chrome") or InStr(activeExe, "msedge")) {
-			return
+			return  ; not used because all browsers activate on redraw not created
 			if WaitBrowserLoaded() {
 				WinGetTitle, activeTitle, A
 				WinGet, activeId, ID, A
-				;TrayTip, Message, Browser loaded (new window) %activeTitle%
+				TrayTip, Message, Browser loaded (new window) %activeTitle%
 				if (InStr(activeTitle, "Tellimused -")) {
 					if (StringCount(activeTitle, " - ") == 2)
 						;SendJavascriptRaw("TellimusedJS.js")
-						SendJavascriptRaw("TellimusedJS.js")
+						SendJavascript("TellimusedJS.js")
 				}
 			}
 		}
@@ -54,21 +55,46 @@ ShellMessage( wParam,lParam )	; Gets all Shell Hook Messages
 		WinGet, activeExe, ProcessName, A
 		if (InStr(activeTitle, "Edge") or InStr(activeTitle, "Internet") or InStr(activeTitle, "Chrome") or InStr(activeExe, "msedge")) {
 			if WaitBrowserLoaded() {
+				global browserName
 				WinGetTitle, activeTitle, A
 				WinGet, activeId, ID, A
+				if (browserName == "IE11") {
+					;TrayTip, Message, Navigating away from %activeTitle%
+					;pwb := WBGet()
+					;FileRead, code, %A_ScriptDir%\Lib\Javascript\TellimusedJS_test.js
+					;pwb.document.parentWindow.execScript(code,"javascript")
+					return
+				}
 				;TrayTip, Message, Browser loaded (redraw) %activeTitle%
-				;Tellimused - PRII, JAKOB ‎- Microsoft Edge
-				;if (InStr(activeTitle, "Tellimused -") && InStr(activeTitle, "Chrome")) {
 				if (InStr(activeTitle, "Tellimused -")) {
 					strCount := StringCount(activeTitle, "- ")
 					;TrayTip, Message, Tiitlis %activeTitle% on tellimused %strCount% korda
-					if (StringCount(activeTitle, "- ") == 2) {
+					if (browserName == "Edge_virtual")
+						dashCount := 1
+					else
+						dashCount := 2
+					if (StringCount(activeTitle, "- ") == dashCount) {
 						;SendJavascriptRaw("TellimusedJS.js")
-						SendJavascriptRaw("TellimusedJS.js")
-						Sleep, 1000
+						SendJavascript("TellimusedJS.js")
+						Sleep, 1000 ; Sleep to wait for browser title to change
 					}
 				}
 			}
+		}
+	}
+}
+
+WBGet(WinTitle="ahk_class IEFrame", Svr#=1) {               ;// based on ComObjQuery docs
+	static msg := DllCall("RegisterWindowMessage", "str", "WM_HTML_GETOBJECT")
+        , IID := "{0002DF05-0000-0000-C000-000000000046}"   ;// IID_IWebBrowserApp
+;//     , IID := "{332C4427-26CB-11D0-B483-00C04FD90119}"   ;// IID_IHTMLWindow2
+	SendMessage msg, 0, 0, Internet Explorer_Server%Svr#%, %WinTitle%
+	
+	if (ErrorLevel != "FAIL") {
+		lResult:=ErrorLevel, VarSetCapacity(GUID,16,0)
+		if DllCall("ole32\CLSIDFromString", "wstr","{332C4425-26CB-11D0-B483-00C04FD90119}", "ptr",&GUID) >= 0 {
+			DllCall("oleacc\ObjectFromLresult", "ptr",lResult, "ptr",&GUID, "ptr",0, "ptr*",pdoc)
+			return ComObj(9,ComObjQuery(pdoc,IID,IID),1), ObjRelease(pdoc)
 		}
 	}
 }
@@ -88,62 +114,56 @@ SendJavascriptRaw(fileName) {
 	SendInput, !d
 	Sleep, 40
 	SendInput, j
+	Clip("avascript:" . code)
 	ClipSaved := ClipboardAll ; save the entire clipboard to the variable ClipSaved
-
-	clipboard := ""           ; empty the clipboard (start off empty to allow ClipWait to detect when the text has arrived)
-
-	clipboard := "avascript:" . code
-	ClipWait, 2              ; wait max. 2 seconds for the clipboard to contain data. 
-	
-	if (!ErrorLevel)         ; If NOT ErrorLevel, ClipWait found data on the clipboard
-		Send, ^v{Enter}             ; paste the text
-	
-	Sleep, 40
-
-	clipboard := ClipSaved   
-	; restore original clipboard
-	
-ClipSaved =              ; Free the memory in case the clipboard was very large.
+	Send, {Enter}
 }
 
 SendJavascript(fileName) {
 	global browserName
 	if (browserName == "Chrome") {
 		SetKeyDelay, 10, -1
-		ClipSaved := ClipboardAll ; save the entire clipboard to the variable ClipSaved
-		clipboard := ""
 		SendInput, !d
 		Sleep, 40
 		SendInput, j
+		Clip("avascript:$.getScript('https://cdn.jsdelivr.net/gh/Descolada/TellimusedJS@latest/" . fileName . "');")
+		Send, {Enter}
+		;SetKeyDelay, 10, -1
+		;ClipSaved := ClipboardAll ; save the entire clipboard to the variable ClipSaved
+		;clipboard := ""
+		;SendInput, !d
+		;Sleep, 40
+		;SendInput, j
 	
-		clipboard := "avascript:$.getScript('https://cdn.jsdelivr.net/gh/Descolada/TellimusedJS@latest/" . fileName . "');"
-		ClipWait, 2
+		;clipboard := "avascript:$.getScript('https://cdn.jsdelivr.net/gh/Descolada/TellimusedJS@latest/" . fileName . "');"
+		;ClipWait, 2
 	
-		if (!ErrorLevel)         ; If NOT ErrorLevel, ClipWait found data on the clipboard
-			Send, ^v{Enter}             ; paste the text
-		Sleep, 40
+		;if (!ErrorLevel)         ; If NOT ErrorLevel, ClipWait found data on the clipboard
+		;	Send, ^v{Enter}             ; paste the text
+		;Sleep, 40
 
-		clipboard := ClipSaved   
-		ClipSaved =              ; Free the memory in case the clipboard was very large.
+		;clipboard := ClipSaved   
+		;ClipSaved =              ; Free the memory in case the clipboard was very large.
 	} else {
 		SetKeyDelay, 100, 50
-		ClipSaved := ClipboardAll ; save the entire clipboard to the variable ClipSaved
-		clipboard := ""
+		;ClipSaved := ClipboardAll ; save the entire clipboard to the variable ClipSaved
+		;clipboard := ""
+		Sleep, 200
 		SendEvent, !d
-		Sleep, 50
+		Sleep, 100
 		SendEvent, j
+		Clip("avascript:$.getScript('https://cdn.jsdelivr.net/gh/Descolada/TellimusedJS@latest/" . fileName . "');")
+		;clipboard := "avascript:$.getScript('https://cdn.jsdelivr.net/gh/Descolada/TellimusedJS@latest/" . fileName . "');"
+		;ClipWait, 1              
 	
-		clipboard := "avascript:$.getScript('https://cdn.jsdelivr.net/gh/Descolada/TellimusedJS@latest/" . fileName . "');"
-		ClipWait, 1              
-	
-		if (!ErrorLevel)         ; If NOT ErrorLevel, ClipWait found data on the clipboard
-			SendEvent, ^v             ; paste the text
+		;if (!ErrorLevel)         ; If NOT ErrorLevel, ClipWait found data on the clipboard
+		;	SendEvent, ^v             ; paste the text
 		Sleep, 100
 		Send, {Enter}
-		Sleep, 40
+		;Sleep, 40
 
-		clipboard := ClipSaved   
-		ClipSaved =              ; Free the memory in case the clipboard was very large.
+		;clipboard := ClipSaved   
+		;ClipSaved =              ; Free the memory in case the clipboard was very large.
 		SetKeyDelay, 10, -1
 	}
 }
@@ -158,7 +178,7 @@ WaitTextExist(searchText, click=40, clickCount=1, offsetX=0, nResult=1, maxTime=
 		images := ImageLibrary
 	}
 	if (!images[searchText]) {
-		TrayTip, Viga!, Teksti "%searchText% ei leitud.
+		TrayTip, Viga!, Teksti "%searchText%" ei leitud.
 		return
 	}
 	foundText := FindText(xWindow, yWindow, xWindow+wWindow, yWindow+hWindow, 0, 0, images[searchText])
@@ -197,7 +217,7 @@ TextExist(searchText, click=0, inBrowser=1) {
 		images := ImageLibrary
 	}
 	if (!images[searchText]) {
-		TrayTip, Viga!, Teksti "%searchText% ei leitud.
+		TrayTip, Viga!, Teksti "%searchText%" ei leitud.
 		return
 	}
 	foundText := FindText(xWindow, yWindow, xWindow+wWindow, yWindow+hWindow, 0, 0, images[searchText])
@@ -229,8 +249,9 @@ WaitBrowserLoaded() {
 	} else if InStr(wTitle, "Edge") {
 		browserName := "Edge"
 	}
-	if WaitTextExist("Reload", 0,,,,10000)
+	if WaitTextExist("Reload", 0,,,,10000) {
 		return 1
+	}
 	return 0
 }
 
