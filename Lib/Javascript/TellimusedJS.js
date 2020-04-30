@@ -181,10 +181,10 @@ function CreateLaborPanel() {
 					.then(() => {
 						$("#ctl00_pc_popup_LabOrderModuleSendToNurse_date").val(sendDate);
 						$("#ctl00_pc_popup_LabOrderModuleSendToNurse_proceed").trigger("click");
-						/*waitForElement("#ctl00_pc_LabOrderModuleNewOrder_copyButton")
+						waitForElement("#ctl00_pc_LabOrderModuleNewOrder_copyButton")
 							.then(() => {
 								if (localStorage.getItem("printAfter") == "true") { $("#ctl00_pc_LabOrderModuleNewOrder_printAllBarCodes").trigger("click"); }
-							});*/
+							});
 					});
 			});
 	});
