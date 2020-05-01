@@ -1,4 +1,4 @@
-Esteri Abimees on abivahend Esteri kiiremaks navigeerimiseks ning automatiseerimiseks, lisaks võimaldab tekstiasendust kiirklahvide abil kiiremaks teksti sisestamiseks. 
+﻿Esteri Abimees on abivahend Esteri kiiremaks navigeerimiseks ning automatiseerimiseks, lisaks võimaldab tekstiasendust kiirklahvide abil kiiremaks teksti sisestamiseks. 
 Koosneb see hetkel kolmest erinevast alamoodulist: 1) Haigusloo abimees 2) Viimati vaadatud patsiendid 3) Tellimuslehe abimees
 
 Esteri Abimehe põhifunktsioonid
@@ -10,16 +10,16 @@ Esteri Abimehe põhifunktsioonid
 
 1) Haigusloo abimees
 - avab Haigusloo paremale küljele lisa-akna, mille tiitliks on patsiendi isikukood (kui on aktiveeritud "Viimati vaadatud patsiendid" alamoodul); võimaldab avada dokumente ning sageli kasutatavaid aknaid ühe nupuvajutusega, filtreerida dokumente hõlpsamini
-- võimaldab topelt-klikiga avada dokumente (nt ravipäevik)
+- võimaldab topelt-klikiga avada dokumente (nt ravipäevik, analüüsid, uuringud)
 - võimaldab laborianalüüside aknas avada analüüsi dünaamika topelt-klikiga
 - võimaldab laborianalüüside aknas liikuda edasi-tagasi hõlpsamalt
-- võimaldab hiire kerimisnupu klikiga käivitada "Ava olemasolev tellimus" (nt radioloogilise uuringu avamine internetilehitsejas)
+- võimaldab hiire kerimisnupu klikiga käivitada "Ava olemasolev tellimus" (nt radioloogilise uuringu avamine veebilehitsejas)
 - võimaldab Isikuandmete aknas kopeerida andmeid Ctrl+C klahvikombinatsiooniga
 
 2) Viimati vaadatud patsiendid
 Avab Esteri käivitudes lisa-akna ekraani üles paremale nurka, kus näidatakse viimati vaadatud patsiente. Topelt-klikkides patsiendi nimele avatakse antud patsiendi haiguslugu. 
-NB! Viimati vaadatud patsientide andmed salvestatakse Abimehe kaustas olevasse abimees_settings.ini faili, mis võib olla potentsiaalne turvarisk, kasutada omal vastutusel!
-abimees_settings.ini failis saab muuta salvestatavate patsientide arvu muutes maxPatients väärtust (vaikimisi 15) [ViewedPatients] all
+NB! Viimati vaadatud patsientide andmed salvestatakse Y:\UserData\Abimees\abimees.ini faili, mis võib olla potentsiaalne turvarisk, kasutada omal vastutusel!
+Sätete failis (avamiseks paremkliki paremal all ikoonile, vali "Redigeeri sätete faili") saab muuta salvestatavate patsientide arvu muutes maxPatients väärtust (vaikimisi 15) [ViewedPatients] all
 
 3) Tellimuslehe abimees
 Tellimuste lehe (labor, radioloogia tellimus, funktsionaaldiagnostika, pildipank) avanedes veebilehitsejas sisestab veebilehitsejasse skripti, mis automatiseerib teatud tegevusi: 
@@ -31,8 +31,8 @@ Parim veebilehitseja antud alamooduli kasutamiseks on Google Chrome. Kui seda ei
 NB! Kuna Tellimuslehe abimees sisestab veebilehitsejasse välise skripti siis see võib olla potentsiaalne turvarisk, kasutada omal vastutusel!
 
 4) Kiirklahvid
-Kiirklahvid tähendab lühendite asendamist pikema tekstiga. Näiteks kirjutades ".ak" (ilma jutumärkideta) ning vajutades Enter või tühikut sisestatakse automaatselt tekst "arst Mari-Liis Männik, D00000", mida võiks näiteks sisestada ravipäevikusse sissekande lõppu. Mõned näidis-kiirklahvid on toodud välja "kiirklahvid.ahk" failis Lib kaustas, kuhu on võimalik ka uusi kiirklahve lisada ning olemasolevaid muuta. 
-Teise variandina saab kiirklahve lisada valides sobiliku teksti ning vajutades Win+H klahvikombinatsiooni.
+Kiirklahvid tähendab lühendite asendamist pikema tekstiga. Näiteks kirjutades ".ak" (ilma jutumärkideta) ning vajutades Enter või tühikut sisestatakse automaatselt tekst "arst Mari-Liis Männik, D00000", mida võiks näiteks sisestada ravipäevikusse sissekande lõppu. Kõik kiirklahvid hoiustatakse Y:\UserData\Abimees\kiirklahvid.ahk failis, mida saab hõlpsasti avada ja muuta paremklikkides paremal all Abimehe ikoonile ja valides "Redigeeri kiirklahve". Seal on toodud ka mõned näidis-kiirklahvid.
+Mugavamalt saab kiirklahve lisada valides sobiliku teksti ning vajutades Win+H klahvikombinatsiooni.
 Pärast muudatuste tegemist peab taaskäivitama Abivahendi: selleks kas vajutada Ctrl+Alt+R või parem-klikkida all paremal Abimehe ikooni ning valida "Taaskäivita".
 
 Abimehe sätestamine:
