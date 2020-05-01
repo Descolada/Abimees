@@ -7,15 +7,15 @@ global visitedBrowsers := []
 global browserName := "Edge"
 global plugins := {}
 global kiirlingid := {}
-IniRead, output, abimees_settings.ini, Plugins, Haiguslugu, 0
+IniRead, output, %UserDataFolder%\abimees.ini, Plugins, Haiguslugu, 0
 plugins.Haiguslugu := output
-IniRead, output, abimees_settings.ini, Plugins, Ester, 0
+IniRead, output, %UserDataFolder%\abimees.ini, Plugins, Ester, 0
 plugins.Ester := output
-IniRead, output, abimees_settings.ini, Plugins, LastViewed, 0
+IniRead, output, %UserDataFolder%\abimees.ini, Plugins, LastViewed, 0
 plugins.LastViewed := output
-IniRead, output, abimees_settings.ini, Plugins, Labor, 0
+IniRead, output, %UserDataFolder%\abimees.ini, Plugins, Labor, 0
 plugins.Labor := output
-IniRead, output, abimees_settings.ini, Plugins, Tellimused, 0
+IniRead, output, %UserDataFolder%\abimees.ini, Plugins, Tellimused, 0
 plugins.Tellimused := output
 
 global Tellimused := {}, TellimusteNimekiri := {}

@@ -1,4 +1,4 @@
-﻿; Kiirklahvide kirjutamine
+﻿﻿; Kiirklahvide kirjutamine
 ; ::tekst::See on minu tekst   -> kirjutades "tekst" ja vajutades tühikut/enterit asendatakse "tekst" lausega "See on minu tekst"
 ; :*:  alguse korral asendatakse tekst koheselt, ei pea vajutama tühikut/enterit
 ; Mitme paragrahviga teksti saab kirjutada kui ümbritseda see sulgudega

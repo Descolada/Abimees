@@ -12,7 +12,10 @@ SetTitleMatchMode, 2
 #include <FindText>
 #include <Clip>
 
-global currentPage := ""
+global currentPage := "", JSUrl, JSFile
+IniRead, JSUrl, %UserDataFolder%\abimees.ini, Tellimused, JSUrl, https://cdn.jsdelivr.net/gh/Descolada/Abimees@latest/Lib/Javascript/
+IniRead, JSFile, %UserDataFolder%\abimees.ini, Tellimused, JSFile, TellimusedJS.js
+
 
 DllCall( "RegisterShellHookWindow", UInt, A_ScriptHwnd )
 MsgNum := DllCall( "RegisterWindowMessage", Str,"SHELLHOOK" )
@@ -27,6 +30,7 @@ return
 
 ShellMessage( wParam,lParam )	; Gets all Shell Hook Messages
 {
+	global JSFile
 	if (wParam = 1) { ;  HSHELL_WINDOWCREATED := 1 ; Only act on Window Created Messages
 		wId:= lParam							; wID is Window Handle
 		WinGetTitle, wTitle, ahk_id %wId%		; wTitle is Window Title
@@ -44,7 +48,7 @@ ShellMessage( wParam,lParam )	; Gets all Shell Hook Messages
 				if (InStr(activeTitle, "Tellimused -")) {
 					if (StringCount(activeTitle, " - ") == 2)
 						;SendJavascriptRaw("TellimusedJS.js")
-						SendJavascript("TellimusedJS.js")
+						SendJavascript(JSFile)
 				}
 			}
 		}
@@ -75,7 +79,7 @@ ShellMessage( wParam,lParam )	; Gets all Shell Hook Messages
 						dashCount := 2
 					if (StringCount(activeTitle, "- ") == dashCount) {
 						;SendJavascriptRaw("TellimusedJS.js")
-						SendJavascript("TellimusedJS.js")
+						SendJavascript(JSFile)
 						Sleep, 1000 ; Sleep to wait for browser title to change
 					}
 				}
@@ -115,13 +119,13 @@ SendJavascriptRaw(fileName) {
 }
 
 SendJavascript(fileName) {
-	global browserName
+	global browserName, JSUrl
 	if (browserName == "Chrome") {
 		SetKeyDelay, 10, -1
 		SendInput, !d
 		Sleep, 40
 		SendInput, j
-		Clip("avascript:$.getScript('https://cdn.jsdelivr.net/gh/Descolada/TellimusedJS@latest/" . fileName . "');")
+		Clip("avascript:$.getScript('" . JSUrl . fileName . "');")
 		Send, {Enter}
 	} else {
 		SetKeyDelay, 100, 50
@@ -129,7 +133,7 @@ SendJavascript(fileName) {
 		SendEvent, !d
 		Sleep, 100
 		SendEvent, j
-		Clip("avascript:$.getScript('https://cdn.jsdelivr.net/gh/Descolada/TellimusedJS@latest/" . fileName . "');")
+		Clip("avascript:$.getScript('" . JSUrl . fileName . "');")
 		Sleep, 100
 		Send, {Enter}
 		SetKeyDelay, 10, -1

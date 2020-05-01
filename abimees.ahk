@@ -11,20 +11,43 @@ SetBatchLines, 1000
 SetTitleMatchMode, 2
 DetectHiddenWindows, On
 
+global UserDataRoot := "Y:\UserData"
+global UserDataFolder := "Y:\UserData\Abimees"  ; Kui seda muuta siis peab muutma ka kõige viimast rida (#include kiirklahvid)
+
+if (!FileExist(UserDataRoot)) {
+	FileCreateDir, %UserDataRoot%
+	FileSetAttrib, +H, %UserDataRoot%
+	FileCreateDir, %UserDataFolder%
+} else {
+	if (!FileExist(UserDataFolder)) 
+		FileCreateDir, %UserDataFolder%
+}
+
+if (!FileExist(UserDataFolder . "\abimees.ini"))
+	if (FileExist(A_ScriptDir . "\Lib\abimees.ini.template"))
+		FileCopy, %A_ScriptDir%\Lib\abimees.ini.template, %UserDataFolder%\abimees.ini
+
+if (!FileExist(UserDataFolder "\kiirklahvid.ahk")) {
+	if (FileExist(A_ScriptDir . "\Lib\kiirklahvid.ahk.template")) {
+		FileCopy, %A_ScriptDir%\Lib\kiirklahvid.ahk.template, %UserDataFolder%\kiirklahvid.ahk
+		Reload
+	}
+}
+
 #include <GlobalVariables>
 #include <FindText>
 
 OnExit("ExitFunc")
 
-IniRead, defaultOsakond, abimees_settings.ini, General, defaultOsakond, %A_Space%
-IniWrite, 0, abimees_settings.ini, General, HaigusluguReady
+IniRead, defaultOsakond, %UserDataFolder%\abimees.ini, General, defaultOsakond, %A_Space%
+IniWrite, 0, %UserDataFolder%\abimees.ini, General, HaigusluguReady
 
 ;#NoTrayIcon  ; Eemalda kommentaar kui ei soovi ikooni
 Menu, Tray, Icon, %A_ScriptDir%\metallic_a.ico
 Menu, Tray, Tip, Abimees
 Menu, Tray, NoMainWindow
 
-IniRead, lingid, abimees_settings.ini, Kiirlingid, kiirlingid, %A_Space%
+IniRead, lingid, %UserDataFolder%\abimees.ini, Kiirlingid, kiirlingid, %A_Space%
 if (lingid && (lingid != A_Space)) {
 	lingidSplit := StrSplit(lingid,"|")
 	for i,e in lingidSplit {
@@ -49,7 +72,8 @@ MsgNum := DllCall( "RegisterWindowMessage", Str,"SHELLHOOK" )
 OnMessage( MsgNum, "ShellMessage" )
 
 if !WinExist("Ester II Statsionaar") {
-	Run, G:\Statsionaar32\Stats.EXE
+	if (FileExist("G:\Statsionaar32\Stats.EXE"))
+		Run, G:\Statsionaar32\Stats.EXE
 } else {
 	ControlGetText, currentOsakond, Edit1, Ester II Statsionaar
 	if (currentOsakond) {
@@ -62,7 +86,7 @@ if !WinExist("Ester II Statsionaar") {
 		if (!WinExist("abimees_lastviewed.ahk ahk_class AutoHotkey") && plugins.LastViewed)
 			Run, %AHKPath% abimees_lastviewed.ahk
 	}
-	;ChangeDefaultOsakond()
+	ChangeDefaultOsakond()
 }
 
 if (!WinExist("abimees_labor.ahk ahk_class AutoHotkey") && plugins.Labor)
@@ -79,18 +103,18 @@ if (WinExist("Haiguslugu ahk_class ThunderRT6FormDC") && plugins.Haiguslugu) {
 return
 
 TrayHaiguslugu:
-	global HaiguslooAbivahendHwnd
+	global HaiguslooAbivahendHwnd, UserDataFolder
 	if (plugins.Haiguslugu) {
 		Menu, Tray, Uncheck, Haigusloo abimees
 		plugins.Haiguslugu := 0
-		IniWrite, 0, abimees_settings.ini, Plugins, Haiguslugu
+		IniWrite, 0, %UserDataFolder%\abimees.ini, Plugins, Haiguslugu
 		if (HaiguslooAbivahendHwnd)
 			if (WinExist("ahk_id " . HaiguslooAbivahendHwnd))
 				WinClose, ahk_id %HaiguslooAbivahendHwnd%
 	} else {
 		Menu, Tray, Check, Haigusloo abimees
 		plugins.Haiguslugu := 1
-		IniWrite, 1, abimees_settings.ini, Plugins, Haiguslugu
+		IniWrite, 1, %UserDataFolder%\abimees.ini, Plugins, Haiguslugu
 		if (WinExist("Haiguslugu ahk_class ThunderRT6FormDC")) {
 			if (!HaiguslooAbivahendHwnd || (HaiguslooAbivahend && (!WinExist("ahk_id " . HaiguslooAbivahendHwnd)))) {
 				WinActivate, Haiguslugu ahk_class ThunderRT6FormDC
@@ -102,11 +126,11 @@ TrayHaiguslugu:
 	return
 	
 TrayDefaultOsakondChange:
-	global koikOsakonnad, defaultOsakond
+	global koikOsakonnad, defaultOsakond, UserDataFolder
 	for i,e in koikOsakonnad
 		Menu, TrayDefaultOsakond, Uncheck, %e%
 	Menu, TrayDefaultOsakond, Check, %A_ThisMenuItem%
-	IniWrite, %A_ThisMenuItem%, abimees_settings.ini, General, defaultOsakond
+	IniWrite, %A_ThisMenuItem%, %UserDataFolder%\abimees.ini, General, defaultOsakond
 	defaultOsakond := A_ThisMenuItem
 	ChangeDefaultOsakond()
 	return
@@ -120,7 +144,18 @@ TrayTellimus:
 	return
 
 TrayInfo:
+	global UserDataFolder
 	Run C:\Windows\Notepad.exe "%A_ScriptDir%\Loe mind.txt"
+	return
+	
+TrayKiirklahvid:
+	global UserDataFolder
+	Run C:\Windows\Notepad.exe "%UserDataFolder%\kiirklahvid.ahk"
+	return
+
+TrayChangeIni:
+	global UserDataFolder
+	Run C:\Windows\Notepad.exe "%UserDataFolder%\abimees.ini"
 	return
 
 TrayExit:
@@ -166,6 +201,8 @@ CreateTrayMenu() {
 	if (plugins.Tellimused)
 		Menu, Tray, Check, Tellimuslehe abimees
 	Menu, Tray, Add
+	Menu, Tray, Add, Redigeeri kiirklahve, TrayKiirklahvid
+	Menu, Tray, Add, Redigeeri sätete faili, TrayChangeIni
 	Menu, Tray, Add, Kasutusinfo, TrayInfo
 	Menu, Tray, Add
 	Menu, Tray, Add, Taaskäivita, TrayRestart
@@ -173,16 +210,17 @@ CreateTrayMenu() {
 }
 
 TrayCheckUncheck(plugin, menuName, ahkName) {
+	global UserDataFolder
 	if (plugins[plugin]) {
 		Menu, Tray, Uncheck, %menuName%
 		plugins[plugin] := 0
-		IniWrite, 0, abimees_settings.ini, Plugins, %plugin%
+		IniWrite, 0, %UserDataFolder%\abimees.ini, Plugins, %plugin%
 		if (WinExist(ahkName . " ahk_class AutoHotkey"))
 			WinClose, %ahkName% ahk_class AutoHotkey
 	} else {
 		Menu, Tray, Check, %menuName%
 		plugins[plugin] := 1
-		IniWrite, 1, abimees_settings.ini, Plugins, %plugin%
+		IniWrite, 1, %UserDataFolder%\abimees.ini, Plugins, %plugin%
 		if (!WinExist(ahkName . " ahk_class AutoHotkey"))
 			Run, %AHKPath% %ahkName%
 	}
@@ -243,10 +281,11 @@ UnhookWinEvent(_hWinEventHook) {
 }  ; cf. https://autohotkey.com/boards/viewtopic.php?t=830
 
 UpdateViewedPatients() {
-	IniRead maxPatients, %A_ScriptDir%\abimees_settings.ini, ViewedPatients, maxPatients, 15
+	global UserDataFolder
+	IniRead maxPatients, %UserDataFolder%\abimees.ini, ViewedPatients, maxPatients, 15
 	patientList := []
 	Loop, %maxPatients% {
-		IniRead pt, %A_ScriptDir%\abimees_settings.ini, ViewedPatients, patient%A_index%, %A_Space%
+		IniRead pt, %UserDataFolder%\abimees.ini, ViewedPatients, patient%A_index%, %A_Space%
 		if (pt && pt != A_Space && pt != "ERROR") 
 			patientList.Push(pt)
 	}
@@ -273,7 +312,7 @@ UpdateViewedPatients() {
 			
 	Loop, %maxPatients% {
 		v := patientList[A_index]
-		IniWrite, %v%, %A_ScriptDir%\abimees_settings.ini, ViewedPatients, patient%A_index%
+		IniWrite, %v%, %UserDataFolder%\abimees.ini, ViewedPatients, patient%A_index%
 	}
 	pt := StrSplit(patientList[1],"|")
 	return pt[2]
@@ -662,16 +701,22 @@ ExitFunc(ExitReason, ExitCode) {
 	return
 #IfWinActive
 
-#IfWinActive ahk_class ThunderRT6FormDC
 ~LButton::
 	global lastMousexPos, lastMouseyPos, DoubleClickTime, DoubleClickError := 2
+	CoordMode, Mouse, Screen
 	MouseGetPos, currentMousexPos, currentMouseyPos 
+	CoordMode, Mouse, Client
 	correctedXCheck := lastMousexPos <= currentMousexPos + DoubleClickError && lastMousexPos >= currentMousexPos - DoubleClickError
 	correctedYCheck := lastMouseyPos <= currentMouseyPos + DoubleClickError && lastMouseyPos >= currentMouseyPos - DoubleClickError
 	;if (A_ThisHotkey = A_PriorHotkey and A_TimeSincePriorHotkey < DoubleClickTime and currentMousexPos = lastMousexPos and currentMouseyPos = lastMouseyPos)
 	if (A_ThisHotkey = A_PriorHotkey and A_TimeSincePriorHotkey < DoubleClickTime and correctedXCheck and correctedYCheck)
 	{
+		MouseGetPos, currentMousexPos, currentMouseyPos
 		SetTitleMatchMode, 2
+		if !WinActive("ahk_class ThunderRT6FormDC") {
+			;TrayTip, Message, Wrong window
+			return
+		}
 		global currentOsakond
 		WinGetActiveTitle, winTitle
 		WinGet, winID, ID, %winTitle%
@@ -763,13 +808,14 @@ ExitFunc(ExitReason, ExitCode) {
 			}
 		}
 	} else {
-		if WinActive("Labor ahk_class ThunderRT6FormDC") {
-			MouseGetPos,,,, hoverControl
-			if (HasVal(["ThunderRT6CommandButton9","ThunderRT6CommandButton10","ThunderRT6CommandButton11","ThunderRT6CommandButton12","ThunderRT6CommandButton13","ThunderRT6CommandButton14"], hoverControl)) {
-				;TrayTip, Message, %hoverControl%
-				ControlFocus, ThunderRT6TextBox27, Labor ahk_class ThunderRT6FormDC
-				ControlClick, %hoverControl%, Labor ahk_class ThunderRT6FormDC
-			}
+		MouseGetPos,,, hoverWindow, hoverControl
+		WinGetClass, hoverClass, ahk_id %hoverWindow%
+		if !(hoverClass == "ThunderRT6FormDC")
+			return
+		if (HasVal(["ThunderRT6CommandButton9","ThunderRT6CommandButton10","ThunderRT6CommandButton11","ThunderRT6CommandButton12","ThunderRT6CommandButton13","ThunderRT6CommandButton14"], hoverControl)) {
+			;TrayTip, Message, %hoverControl%
+			ControlFocus, ThunderRT6TextBox27, Labor ahk_class ThunderRT6FormDC
+			ControlClick, %hoverControl%, Labor ahk_class ThunderRT6FormDC
 		}	
 	}
 	lastMousexPos := currentMousexPos, lastMouseyPos := currentMouseyPos
@@ -794,7 +840,6 @@ ExitFunc(ExitReason, ExitCode) {
 	}
 	return
 
-#IfWinActive
 
 #h::  ; Win+H hotkey
 	; Get the text currently selected. The clipboard is used instead of
@@ -831,11 +876,12 @@ ExitFunc(ExitReason, ExitCode) {
 	    return
 	}
 	; Otherwise, add the hotstring and reload the script:
-	FileAppend, `n%Hotstring%, %A_ScriptDir%\kiirklahvid.ahk  ; Put a `n at the beginning in case file lacks a blank line at its end.
+	global UserDataFolder
+	FileAppend, `n%Hotstring%, %UserDataFolder%\kiirklahvid.ahk  ; Put a `n at the beginning in case file lacks a blank line at its end.
 	Reload
 	Sleep 200 ; If successful, the reload will close this instance during the Sleep, so the line below will never be reached.
-	MsgBox, 4,, The hotstring just added appears to be improperly formatted.  Would you like to open the script for editing? Note that the bad hotstring is at the bottom of the script.
-	IfMsgBox, Yes, Edit
+	MsgBox, 4,, Näib et lisatud kiirklahv oli vigane. Kas soovid avada kiirklahvi faili redigeerimiseks? Katkine kiirklahv on selle faili lõpus.
+	IfMsgBox, Yes, Run C:\Windows\Notepad.exe "%UserDataFolder%\kiirklahvid.ahk"
 	return
 
 MoveCaret:
@@ -846,4 +892,4 @@ MoveCaret:
 	SetTimer, MoveCaret, Off
 	return
 
-#include <kiirklahvid>
+#include *i Y:\UserData\Abimees\kiirklahvid.ahk

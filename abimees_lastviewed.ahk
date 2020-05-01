@@ -9,9 +9,11 @@ SetBatchLines, 1000
 SetTitleMatchMode, 2
 DetectHiddenWindows, On
 
+global UserDataRoot := "Y:\UserData"
+global UserDataFolder := "Y:\UserData\Abimees"
 global patientList := []
 global maxPatients := 15
-IniRead maxPatients, %A_ScriptDir%\abimees_settings.ini, ViewedPatients, maxPatients, 15
+IniRead maxPatients, %UserDataFolder%\abimees.ini, ViewedPatients, maxPatients, 15
 
 UpdatePatientList()
 
@@ -104,7 +106,7 @@ UnhookWinEvent(_hWinEventHook) {
 ShellMessage( wParam,lParam )	; Gets all Shell Hook Messages
 {
 	if (wParam = 1) { ;  HSHELL_WINDOWCREATED := 1 ; Only act on Window Created Messages
-		global maxPatients, patientList
+		global maxPatients, patientList, UserDataFolder
 		wId:= lParam							; wID is Window Handle
 		WinGetTitle, wTitle, ahk_id %wId%		; wTitle is Window Title
 		WinGetClass, wClass, ahk_id %wId%		; wClass is Window Class
@@ -112,14 +114,14 @@ ShellMessage( wParam,lParam )	; Gets all Shell Hook Messages
 
 		if InStr(wTitle, "Haiguslugu") {
 			WinWaitActive, Haiguslugu ahk_class ThunderRT6FormDC
-			IniRead, haiguslugu, abimees_settings.ini, Plugins, Haiguslugu, 0
+			IniRead, haiguslugu, %UserDataFolder%\abimees.ini, Plugins, Haiguslugu, 0
 			if (haiguslugu) {
 				startTime := A_TickCount
 				Loop {
-					IniRead, ready, abimees_settings.ini, General, HaigusluguReady
+					IniRead, ready, %UserDataFolder%\abimees.ini, General, HaigusluguReady
 					Sleep, 200
 				} Until ((A_TickCount-startTime) > 3000 || ready)
-				IniWrite, 0, abimees_settings.ini, General, HaigusluguReady
+				IniWrite, 0, %UserDataFolder%\abimees.ini, General, HaigusluguReady
 			} else {
 				UpdateViewedPatients()
 			}
@@ -142,19 +144,20 @@ UpdateListBox() {
 }
 
 UpdatePatientList() {
-	global maxPatients, patientList := []
+	global maxPatients, patientList := [], UserDataFolder
 	Loop, %maxPatients% {
-		IniRead pt, %A_ScriptDir%\abimees_settings.ini, ViewedPatients, patient%A_index%, %A_Space%
-		if (pt && pt != A_Space && pt != "ERROR") 
+		IniRead pt, %UserDataFolder%\abimees.ini, ViewedPatients, patient%A_index%, %A_Space%
+		if (pt && pt != A_Space) 
 			patientList.Push(pt)
 	}
 }
 
 UpdateViewedPatients() {
-	IniRead maxPatients, %A_ScriptDir%\abimees_settings.ini, ViewedPatients, maxPatients, 15
+	global UserDataFolder
+	IniRead maxPatients, %UserDataFolder%\abimees.ini, ViewedPatients, maxPatients, 15
 	patientList := []
 	Loop, %maxPatients% {
-		IniRead pt, %A_ScriptDir%\abimees_settings.ini, ViewedPatients, patient%A_index%, %A_Space%
+		IniRead pt, %UserDataFolder%\abimees.ini, ViewedPatients, patient%A_index%, %A_Space%
 		if (pt && pt != A_Space && pt != "ERROR") 
 			patientList.Push(pt)
 	}
@@ -181,7 +184,8 @@ UpdateViewedPatients() {
 			
 	Loop, %maxPatients% {
 		v := patientList[A_index]
-		IniWrite, %v%, %A_ScriptDir%\abimees_settings.ini, ViewedPatients, patient%A_index%
+		if v
+			IniWrite, %v%, %UserDataFolder%\abimees.ini, ViewedPatients, patient%A_index%
 	}
 	pt := StrSplit(patientList[1],"|")
 	return pt[2]
