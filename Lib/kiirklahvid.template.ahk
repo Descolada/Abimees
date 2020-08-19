@@ -1,4 +1,4 @@
-﻿﻿; Kiirklahvide kirjutamine
+﻿; Kiirklahvide kirjutamine
 ; ::tekst::See on minu tekst   -> kirjutades "tekst" ja vajutades tühikut/enterit asendatakse "tekst" lausega "See on minu tekst"
 ; :*:  alguse korral asendatakse tekst koheselt, ei pea vajutama tühikut/enterit
 ; Mitme paragrahviga teksti saab kirjutada kui ümbritseda see sulgudega
@@ -52,8 +52,8 @@ RAD
 	FormatTime, CurrentDateTime,, dd.MM.yy
 	Send %CurrentDateTime% lubatud rahuldavas üldseisundis kodusele ravile.
 
-::üs::Üldseisund 
-::a&o::Adekvaatselt kontaktne ja igakülgselt orienteeritud.
+::.üs::Üldseisund 
+::.ao::Adekvaatselt kontaktne ja igakülgselt orienteeritud.
 ::.kiirenorm::Kopsudes bilat vesik h/k; südametoonid normofrekventsed, regulaarsed, kõrvalkahinateta. Kõht pehme, valutu. Perifeeria tursevaba.
 
 :r0:.muutusteta::

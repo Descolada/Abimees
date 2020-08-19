@@ -1,4 +1,6 @@
-﻿Esteri Abimees on abivahend Esteri kiiremaks navigeerimiseks ning automatiseerimiseks, lisaks võimaldab tekstiasendust kiirklahvide abil kiiremaks teksti sisestamiseks. 
+﻿Esteri Abimees v0.1-beta
+
+Esteri Abimees on abivahend Esteri kiiremaks navigeerimiseks ning automatiseerimiseks, lisaks võimaldab tekstiasendust kiirklahvide abil kiiremaks teksti sisestamiseks. 
 Koosneb see hetkel kolmest erinevast alamoodulist: 1) Haigusloo abimees 2) Viimati vaadatud patsiendid 3) Tellimuslehe abimees
 
 Esteri Abimehe põhifunktsioonid

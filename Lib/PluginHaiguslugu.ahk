@@ -14,10 +14,18 @@ CreateHaiguslooAbivahend() {
 	SetWinDelay, -1
 
 	WinGet, PID, PID, % "ahk_id " . owner:=WinExist() 
+	WinGet, ownerExe, ProcessName, % "ahk_id " . owner:=WinExist() 
+	StringLower, ownerExe, ownerExe
+	if (ownerExe == "stats.exe")
+		guiName := "Statsionaar", global abimeesStats := {}, abimeesStats.resetMoodul := 1
+	else
+		guiName := "Registratuur", global abimeesAmb := {}, abimeesAmb.resetMoodul := 1
+	
+	
 	IniWrite, 0, %UserDataFolder%\abimees.ini, General, HaigusluguReady
 	windowName := "Abimees"
 	if (plugins.LastViewed) {
-		ik := UpdateViewedPatients()
+		ik := UpdateViewedPatients(ownerExe)
 		if ik
 			windowName := ik
 	}
@@ -27,34 +35,37 @@ CreateHaiguslooAbivahend() {
 	button_w := window_w
 	button_h := 30
 
-	GUI, Haiguslugu:New, +ToolWindow +Owner%owner% +Hwndowned -SysMenu
+	GUI, %guiName%:New, +ToolWindow +Owner%owner% +Hwndowned -SysMenu
 	if (kiirlingid != {})
-		Gui, Haiguslugu:Add, Button, gButKiirlingid x0 y0 w%button_w% h%button_h%, Kiirlingid
-	Gui, Haiguslugu:Add, Button, gButLaboriTellimus x0 y60 w%button_w% h%button_h%, Labori tellimus
-	Gui, Haiguslugu:Add, Button, gButRadioloogiaTellimus x0 y90 w%button_w% h%button_h%, Radiol. tellimus
-	Gui, Haiguslugu:Add, Button, gButFunktsionaaldgn x0 y120 w%button_w% h%button_h%, Funktsionaaldgn
-	Gui, Haiguslugu:Add, Button, gButPildipank x0 y150 w%button_w% h%button_h%, Pildipank
-	Gui, Haiguslugu:Add, Button, gButRavipaevik x0 y330 w%button_w% h%button_h%, Ravipäevik
-	Gui, Haiguslugu:Add, Button, gButEpikriis x0 y360 w%button_w% h%button_h%, Epikriis
-	Gui, Haiguslugu:Add, Button, gButUuringud x0 y420 w%button_w% h%button_h%, Uuringud
-	Gui, Haiguslugu:Add, Button, gButKirjeldused x0 y450 w%button_w% h%button_h%, Kirjeldused
-	WinGetPos, x_haigus, y_haigus, w_haigus, h_haigus, Haiguslugu
+		Gui, %guiName%:Add, Button, gButKiirlingid x0 y0 w%button_w% h%button_h%, Kiirlingid
+	Gui, %guiName%:Add, Button, gButLaboriTellimus x0 y60 w%button_w% h%button_h%, Labori tellimus
+	Gui, %guiName%:Add, Button, gButRadioloogiaTellimus x0 y90 w%button_w% h%button_h%, Radiol. tellimus
+	Gui, %guiName%:Add, Button, gButFunktsionaaldgn x0 y120 w%button_w% h%button_h%, Funktsionaaldgn
+	Gui, %guiName%:Add, Button, gButPildipank x0 y150 w%button_w% h%button_h%, Pildipank
+	Gui, %guiName%:Add, Button, gButRavipaevik x0 y330 w%button_w% h%button_h%, Ravipäevik
+	Gui, %guiName%:Add, Button, gButEpikriis x0 y360 w%button_w% h%button_h%, Epikriis
+	Gui, %guiName%:Add, Button, gButUuringud x0 y420 w%button_w% h%button_h%, Uuringud
+	Gui, %guiName%:Add, Button, gButKirjeldused x0 y450 w%button_w% h%button_h%, Kirjeldused
+	WinGetPos, x_haigus, y_haigus, w_haigus, h_haigus, Haiguslugu ahk_exe %ownerExe%
 	w_adjusted_x := x_haigus + w_haigus - 10
 	adjusted_h_haigus := h_haigus-35
-	GUI, Haiguslugu:Show, x%w_adjusted_x% y%y_haigus% w%window_w% h%adjusted_h_haigus%, %windowName%
-	WinActivate, Haiguslugu
+	GUI, %guiName%:Show, x%w_adjusted_x% y%y_haigus% w%window_w% h%adjusted_h_haigus%, %windowName%
+	WinActivate, Haiguslugu ahk_exe %ownerExe%
 
 	global HaiguslooAbivahendHwnd := owned
 	global resetAbimees = 1
-	OnLocationChangeMonitor(owner, owned, PID) ; INIT
+	;abimeesStats.resetMoodul := 1
+
+	OnLocationChangeMonitor2(owner, owned, PID) ; INIT
 
 	IniWrite, 1, %UserDataFolder%\abimees.ini, General, HaigusluguReady
 
-	WinWaitClose % "ahk_id " . owner ; ... or until the owner window does not exist
-	Gui, Haiguslugu:Destroy
+	;WinWaitClose % "ahk_id " . owner ; ... or until the owner window does not exist
+	;UnhookWinEvent(abimeesStats.hWinEventHook)
+	;Gui, %guiName%:Destroy
 	
-	if WinExist("Patsient ahk_class ThunderRT6FormDC")
-		WinClose, Patsient ahk_class ThunderRT6FormDC
+	;if WinExist("Patsient ahk_class ThunderRT6FormDC")
+	;	WinClose, Patsient ahk_class ThunderRT6FormDC
 	return
 	
 	ButKiirlingid:
@@ -62,7 +73,7 @@ CreateHaiguslooAbivahend() {
 		return
 
 	ButRavipaevik:
-		FindAndOpenDocument("Ravipäevik")
+		FindAndOpenDocument((A_Gui == "Statsionaar") ? "stats.exe" : "registr.exe", "Ravipäevik")
 		return
 
 	;ButAnamnees:
@@ -70,101 +81,111 @@ CreateHaiguslooAbivahend() {
 	;	return
 
 	ButEpikriis:
-		FindAndOpenDocument("Epikriis", "Etappepikriis")
+		FindAndOpenDocument((A_Gui == "Statsionaar") ? "stats.exe" : "registr.exe", "Epikriis", "Etappepikriis")
 		return
 
 	ButUuringud:
-		WinActivate, Haiguslugu ahk_class ThunderRT6FormDC
-		WinWaitActive, Haiguslugu ahk_class ThunderRT6FormDC,,1
-		FiltreeriDokumendid("u")
+		if (A_Gui == "Statsionaar") {
+			WinActivate, Haiguslugu ahk_exe stats.exe
+			WinWaitActive, Haiguslugu ahk_exe stats.exe,,1
+		} else {
+			WinActivate, Haiguslugu ahk_exe registr.exe
+			WinWaitActive, Haiguslugu ahk_exe registr.exe,,1
+		}
+		FiltreeriDokumendid("u", (A_Gui == "Statsionaar") ? "stats.exe" : "registr.exe")
 		return
 
 	ButKirjeldused:
-		WinActivate, Haiguslugu ahk_class ThunderRT6FormDC
-		WinWaitActive, Haiguslugu ahk_class ThunderRT6FormDC,,1
-		FiltreeriDokumendid("k")
+		if (A_Gui == "Statsionaar") {
+			WinActivate, Haiguslugu ahk_exe stats.exe
+			WinWaitActive, Haiguslugu ahk_exe stats.exe,,1
+		} else {
+			WinActivate, Haiguslugu ahk_exe registr.exe
+			WinWaitActive, Haiguslugu ahk_exe registr.exe,,1
+		}
+		FiltreeriDokumendid("k", (A_Gui == "Statsionaar") ? "stats.exe" : "registr.exe")
 		return
 
 	ButLaboriTellimus:
-		KlikiTellimuseNupule(3)
+		KlikiTellimuseNupule(3, (A_Gui == "Statsionaar") ? "stats.exe" : "registr.exe")
 		return
 
 	ButRadioloogiaTellimus:
-		KlikiTellimuseNupule(1)
+		KlikiTellimuseNupule(1, (A_Gui == "Statsionaar") ? "stats.exe" : "registr.exe")
 		return
 
 	ButFunktsionaaldgn:
-		KlikiTellimuseNupule(4)
+		KlikiTellimuseNupule(4, (A_Gui == "Statsionaar") ? "stats.exe" : "registr.exe")
 		return
 
 	ButPildipank:
-		KlikiTellimuseNupule(11)
+		KlikiTellimuseNupule(10, (A_Gui == "Statsionaar") ? "stats.exe" : "registr.exe")
 		return
 }
 
-KlikiTellimuseNupule(downRepeats) {
-	WinActivate, Haiguslugu ahk_class ThunderRT6FormDC
+KlikiTellimuseNupule(downRepeats, exeName = "stats.exe") {
+	StringLower, exeName, exeName
+	WinActivate, Haiguslugu ahk_exe %exeName%
 	Sleep, 40
 	SetControlDelay -1 ; muudab ControlClicki usaldusväärsemaks
-	ControlClick, ThunderRT6CommandButton42, Haiguslugu ahk_class ThunderRT6FormDC,,,, NA
-	Sleep,40
+	ControlClick, % (exeName == "stats.exe") ? "ThunderRT6CommandButton42" : "ThunderRT6CommandButton27", Haiguslugu ahk_exe %exeName%,,,, NA
+	Sleep,150
 	Send,{Down %downRepeats%}
 	Send,{Enter}
 	return
 }
 
-GetIsikukood() {
-	WinActivate, Haiguslugu ahk_class ThunderRT6FormDC
+GetIsikukood(exeName = "stats.exe") {
+	WinActivate, Haiguslugu ahk_exe %exeName%
 	SetControlDelay -1 ; muudab ControlClicki usaldusväärsemaks
-	ControlClick, ThunderRT6CommandButton72, Haiguslugu ahk_class ThunderRT6FormDC,,,, NA
-	WinWaitActive, Isikuandmed ahk_class ThunderRT6FormDC,,2
-	ControlGetText, output, ThunderRT6TextBox9, Isikuandmed ahk_class ThunderRT6FormDC
-	WinClose, Isikuandmed ahk_class ThunderRT6FormDC
+	ControlClick, % (exeName == "stats.exe") ? "ThunderRT6CommandButton72" : "ThunderRT6CommandButton55", Haiguslugu ahk_exe %exeName%,,,, NA
+	WinWaitActive, Isikuandmed ahk_exe %exeName%,,2
+	ControlGetText, output, ThunderRT6TextBox9, Isikuandmed ahk_exe %exeName%
+	WinClose, Isikuandmed ahk_exe %exeName%
 	return output
 }
 
-FiltreeriDokumendid(selectionChar) {
+FiltreeriDokumendid(selectionChar, exeName = "stats.exe") {
 	SetControlDelay -1
 	; Kontrolli kas nimekiri on filtreeritud, kui on siis võta see maha
-	ControlGet, filtered, Checked,, ThunderRT6CheckBox1, Haiguslugu ahk_class ThunderRT6FormDC
+	ControlGet, filtered, Checked,, ThunderRT6CheckBox1, Haiguslugu ahk_exe %exeName%
 	if filtered {
-		ControlClick, ThunderRT6CheckBox1, Haiguslugu ahk_class ThunderRT6FormDC,,,, NA
+		ControlClick, ThunderRT6CheckBox1, Haiguslugu ahk_exe %exeName%,,,, NA
 		Sleep, 100
 	}
-
 	; Filtreeri Kirjelduse järgi
-	ControlClick, ThunderRT6CommandButton12, Haiguslugu ahk_class ThunderRT6FormDC,,,, NA
+	ControlClick, % (exeName == "stats.exe") ? "ThunderRT6CommandButton12" : "ThunderRT6CommandButton2", Haiguslugu ahk_exe %exeName%,,,, NA
 	Sleep, 40
 	Send, {%selectionChar%}{Enter}
 }
 
-FindAndOpenDocument(doc, backupDoc = "") {
+FindAndOpenDocument(exeName, doc, backupDoc = "") {
 	if !WinExist("Haiguslugu") {
 		TrayTip, Viga!, Ava kõigepealt haiguslugu
 		return
 	}
 
-	if WinExist("Kirjelduse sisestamine ahk_class ThunderRT6FormDC") {
-		WinActivate, Kirjelduse sisestamine ahk_class ThunderRT6FormDC
+	if WinExist("Kirjelduse sisestamine ahk_exe " . exeName) {
+		WinActivate, Kirjelduse sisestamine ahk_exe %exeName%
 		MsgBox, 51, Hoiatus, "Kirjelduse sisestamine" aken on juba avatud. Kas soovid enne jätkamist eelneva teksti salvestada?
 		IfMsgBox, Yes 
 		{
-			ControlClick, ThunderRT6CommandButton3, Kirjelduse sisestamine ahk_class ThunderRT6FormDC,,,,NA
+			ControlClick, % (exeName == "stats.exe") ? "ThunderRT6CommandButton3" : "ThunderRT6CommandButton2", Kirjelduse sisestamine ahk_exe %exeName%,,,,NA
 		} else {
 			IfMsgBox, No
-				ControlClick, ThunderRT6CommandButton4, Kirjelduse sisestamine ahk_class ThunderRT6FormDC,,,,NA
+				ControlClick, % (exeName == "stats.exe") ? "ThunderRT6CommandButton4" : "ThunderRT6CommandButton3", Kirjelduse sisestamine ahk_exe %exeName%,,,,NA
 			else 
 				return
 		}
 	}
 
-	WinActivate, Haiguslugu ahk_class ThunderRT6FormDC
-	WinWaitActive, Haiguslugu ahk_class ThunderRT6FormDC,,1
-	FiltreeriDokumendid("k")
+	WinActivate, Haiguslugu ahk_exe %exeName%
+	WinWaitActive, Haiguslugu ahk_exe %exeName%,,1
+	FiltreeriDokumendid("k", exeName)
 	; wait until Filtered button is clicked	
 	startTime := A_TickCount
 	Loop {
-		ControlGet, filteredChecked, Checked,, ThunderRT6CheckBox1, Haiguslugu ahk_class ThunderRT6FormDC
+		ControlGet, filteredChecked, Checked,, ThunderRT6CheckBox1, Haiguslugu ahk_exe %exeName%
 		if ((A_TickCount-startTime)>1000)
 			break
 		else
@@ -183,18 +204,19 @@ FindAndOpenDocument(doc, backupDoc = "") {
 			}
 		}
 	}
+	Sleep, 200
 
-	if WinActive("Valimine tabelist ahk_class ThunderRT6FormDC") {
+	if WinActive("Valimine tabelist ahk_exe " . exeName) {
 		ControlClick, ThunderRT6CommandButton7, Valimine tabelist ahk_class ThunderRT6FormDC,,,, NA ; Sulge "Valimine tabelist"
 		WinWaitNotActive, Valimine tabelist ahk_class ThunderRT6FormDC
 	}
-	ControlClick, ThunderRT6CommandButton33, Haiguslugu ahk_class ThunderRT6FormDC,,,, NA ; kliki Täpsemalt nupule
+	ControlClick, % (exeName == "stats.exe") ? "ThunderRT6CommandButton33" : "ThunderRT6CommandButton20", Haiguslugu ahk_exe %exeName%,,,, NA ; kliki Täpsemalt nupule
 
 	WinWaitNotActive, ahk_id %winID%,,1
 	if ErrorLevel
 		return
 	if WinActive("Haiguslugu ahk_class ThunderRT6FormDC") {
-		ControlGetText, noBut, Button2, Haiguslugu ahk_class ThunderRT6FormDC
+		ControlGetText, noBut, Button2, Haiguslugu ahk_exe %exeName%
 		if (noBut == "&No") {
 			ControlClick, Button2, Haiguslugu ahk_class ThunderRT6FormDC,,,, NA
 			Sleep, 100
@@ -203,9 +225,9 @@ FindAndOpenDocument(doc, backupDoc = "") {
 
 	if WinExist("Valimine tabelist ahk_class ThunderRT6FormDC") {
 		ControlClick, ThunderRT6CommandButton7, Valimine tabelist ahk_class ThunderRT6FormDC,,,, NA ; Sulge "Valimine tabelist"
-		If WinExist("Kirjelduse sisestamine ahk_class ThunderRT6FormDC")
-			WinActivate, Kirjelduse sisestamine ahk_class ThunderRT6FormDC
 	}
+	If WinExist("Kirjelduse sisestamine ahk_class ThunderRT6FormDC ahk_exe " . exeName)
+		WinActivate, Kirjelduse sisestamine ahk_class ThunderRT6FormDC ahk_exe %exeName%
 	return
 }
 
