@@ -1,39 +1,32 @@
 ﻿Esteri Abimees v0.1-beta
 
-Esteri Abimees on abivahend Esteri kiiremaks navigeerimiseks ning automatiseerimiseks, lisaks võimaldab tekstiasendust kiirklahvide abil kiiremaks teksti sisestamiseks. 
-Koosneb see hetkel kolmest erinevast alamoodulist: 1) Haigusloo abimees 2) Viimati vaadatud patsiendid 3) Tellimuslehe abimees
+Esteri Abimees on abivahend Esteri kiiremaks navigeerimiseks ning automatiseerimiseks. Abimehest eraldi saab jooksutada ka Kiirklahvid moodulit, millest on juttu allpool.
+Koosneb see hetkel kolmest erinevast alamoodulist: 1) Haigusloo abimees 2) Viimati vaadatud patsiendid 3) Kiirklahvid
 
 Esteri Abimehe põhifunktsioonid
 - programmi käivitudes avab automaatselt Esteri
 - saab sätestada vaikimisi osakonna, mis valitakse sisselogimisel (paremklikkides Abimehe ikoonile ekraani paremal all nurgas)
 - saab aktiveerida/inaktiveerida alamooduleid (paremklikkides Abimehe ikoonile ekraani paremal all nurgas)
-- osakonna nimekirjas võimaldab haiguslugusid avada patsiendi nime topelt-klikkimisega
+- võimaldab paljusid asju avada topelt-klikiga (patsiendi haiguslugu, laborianalüüsid jne)
 - tekstiasenduse kiirklahvid (põhjalikum kirjeldus allpool)
 
 1) Haigusloo abimees
 - avab Haigusloo paremale küljele lisa-akna, mille tiitliks on patsiendi isikukood (kui on aktiveeritud "Viimati vaadatud patsiendid" alamoodul); võimaldab avada dokumente ning sageli kasutatavaid aknaid ühe nupuvajutusega, filtreerida dokumente hõlpsamini
 - võimaldab topelt-klikiga avada dokumente (nt ravipäevik, analüüsid, uuringud)
 - võimaldab laborianalüüside aknas avada analüüsi dünaamika topelt-klikiga
-- võimaldab laborianalüüside aknas liikuda edasi-tagasi hõlpsamalt
-- võimaldab hiire kerimisnupu klikiga käivitada "Ava olemasolev tellimus" (nt radioloogilise uuringu avamine veebilehitsejas)
+- võimaldab laborianalüüside aknas liikuda edasi-tagasi hõlpsamalt (ei pea pärast analüüsi klikkimist mujale klikkima)
+- võimaldab hiire kerimisnupu klikiga (middle click) käivitada "Ava olemasolev tellimus" (nt radioloogilise uuringu avamine)
 - võimaldab Isikuandmete aknas kopeerida andmeid Ctrl+C klahvikombinatsiooniga
+- ravipäevikus teostada otsingut Ctrl+F klahvikombinatsiooniga
+- ravipäevikus valida kogu tekst Ctrl+A klahvikombinatsiooniga
 
 2) Viimati vaadatud patsiendid
 Avab Esteri käivitudes lisa-akna ekraani üles paremale nurka, kus näidatakse viimati vaadatud patsiente. Topelt-klikkides patsiendi nimele avatakse antud patsiendi haiguslugu. 
 NB! Viimati vaadatud patsientide andmed salvestatakse Y:\UserData\Abimees\abimees.ini faili, mis võib olla potentsiaalne turvarisk, kasutada omal vastutusel!
-Sätete failis (avamiseks paremkliki paremal all ikoonile, vali "Redigeeri sätete faili") saab muuta salvestatavate patsientide arvu muutes maxPatients väärtust (vaikimisi 15) [ViewedPatients] all
+Sätete failis (avamiseks paremkliki paremal all ikoonile, vali "Redigeeri sätete faili") saab muuta salvestatavate patsientide arvu muutes maxPatients väärtust [ViewedPatients] all (vaikimisi 15)
 
-3) Tellimuslehe abimees
-Tellimuste lehe (labor, radioloogia tellimus, funktsionaaldiagnostika, pildipank) avanedes veebilehitsejas sisestab veebilehitsejasse skripti, mis automatiseerib teatud tegevusi: 
-- labori tellimuse moodulis tekitab liigutatava kiirtellimuste akna; avab automaatselt "Lisa uuring" rippmenüü; tekitab "Edasi" nupu ridale lisanupud "Saada täna/homme/ülehomme"
-- radioloogia tellimuse moodulis avab automaatselt uuringu tellimise akna
-- pildipanga moodulis valib "Pildipank" ning otsib uuringud automaatselt
-- funktsionaaldiagnostika moodulis avab automaatselt "Lisa uuring" rippmenüü, valib uuringu koha ning saabumise viisi
-Parim veebilehitseja antud alamooduli kasutamiseks on Google Chrome. Kui seda ei ole arvutisse installeeritud, siis peaks võtma ühendust Helpdeskiga. Google Chrome vaikimisi veebilehitsejaks sätestamiseks tuleb Windows 10-s Start menüüst otsida Default apps ning avanevas aknas valima Web browser all Google Chrome.
-NB! Kuna Tellimuslehe abimees sisestab veebilehitsejasse välise skripti siis see võib olla potentsiaalne turvarisk, kasutada omal vastutusel!
-
-4) Kiirklahvid
-Kiirklahvid tähendab lühendite asendamist pikema tekstiga. Näiteks kirjutades ".ak" (ilma jutumärkideta) ning vajutades Enter või tühikut sisestatakse automaatselt tekst "arst Mari-Liis Männik, D00000", mida võiks näiteks sisestada ravipäevikusse sissekande lõppu. Kõik kiirklahvid hoiustatakse Y:\UserData\Abimees\kiirklahvid.ahk failis, mida saab hõlpsasti avada ja muuta paremklikkides paremal all Abimehe ikoonile ja valides "Redigeeri kiirklahve". Seal on toodud ka mõned näidis-kiirklahvid.
+3) Kiirklahvid
+Kiirklahvid tähendab lühendite asendamist pikema tekstiga. Näiteks kirjutades ".ak" (ilma jutumärkideta) ning vajutades Enter või tühikut sisestatakse automaatselt tekst "arst Mari-Liis Männik, D00000", mida võiks näiteks sisestada ravipäevikusse sissekande lõppu. Kõik kiirklahvid hoiustatakse Y:\UserData\Abimees\kiirklahvid.ahk failis, mida saab hõlpsasti avada ja muuta paremklikkides paremal all Abimehe või Kiirklahvide ikoonile ja valides "Redigeeri kiirklahve". Seal on toodud ka mõned näidis-kiirklahvid.
 Mugavamalt saab kiirklahve lisada valides sobiliku teksti ning vajutades Win+H klahvikombinatsiooni.
 Pärast muudatuste tegemist peab taaskäivitama Abivahendi: selleks kas vajutada Ctrl+Alt+R või parem-klikkida all paremal Abimehe ikooni ning valida "Taaskäivita".
 
