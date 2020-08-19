@@ -4,12 +4,13 @@ SendMode Input  ; Recommended for new scripts due to its superior speed and reli
 CoordMode, Mouse, Client ; koordinaadid relatiivselt akna suhtes
 CoordMode, Pixel, Client 
 SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
-SetBatchLines, 1000
+SetBatchLines, 50ms
 #Hotstring C R
 #Hotstring EndChars `n `t  ; TAB, SPACE, ja ENTER kutsuvad ainult kiirklahvid esile
 #MaxHotkeysPerInterval 150
 SetTitleMatchMode, 2
 DetectHiddenWindows, On
+SetWinDelay, -1
 
 global UserDataRoot := "Y:\UserData"
 global UserDataFolder := "Y:\UserData\Abimees"  ; Kui seda muuta siis peab muutma ka kõige viimast rida (#include kiirklahvid)
@@ -24,12 +25,12 @@ if (!FileExist(UserDataRoot)) {
 }
 
 if (!FileExist(UserDataFolder . "\abimees.ini"))
-	if (FileExist(A_ScriptDir . "\Lib\abimees.ini.template"))
-		FileCopy, %A_ScriptDir%\Lib\abimees.ini.template, %UserDataFolder%\abimees.ini
+	if (FileExist(A_ScriptDir . "\Lib\abimees.template.ini"))
+		FileCopy, %A_ScriptDir%\Lib\abimees.template.ini, %UserDataFolder%\abimees.ini
 
 if (!FileExist(UserDataFolder "\kiirklahvid.ahk")) {
-	if (FileExist(A_ScriptDir . "\Lib\kiirklahvid.ahk.template")) {
-		FileCopy, %A_ScriptDir%\Lib\kiirklahvid.ahk.template, %UserDataFolder%\kiirklahvid.ahk
+	if (FileExist(A_ScriptDir . "\Lib\kiirklahvid.template.ahk")) {
+		FileCopy, %A_ScriptDir%\Lib\kiirklahvid.template.ahk, %UserDataFolder%\kiirklahvid.ahk
 		Reload
 	}
 }
@@ -71,10 +72,17 @@ DllCall( "RegisterShellHookWindow", UInt, A_ScriptHwnd )
 MsgNum := DllCall( "RegisterWindowMessage", Str,"SHELLHOOK" )
 OnMessage( MsgNum, "ShellMessage" )
 
-if !WinExist("Ester II Statsionaar") {
+if (autoStart.EsterStatsionaar) {
 	if (FileExist("G:\Statsionaar32\Stats.EXE"))
 		Run, G:\Statsionaar32\Stats.EXE
-} else {
+}
+
+if (autoStart.EsterRegistratuur) {
+	if (FileExist("G:\Registratuur32\Registr.exe"))
+		Run, G:\Registratuur32\Registr.exe
+}
+
+if WinExist("Ester II Statsionaar") {
 	ControlGetText, currentOsakond, Edit1, Ester II Statsionaar
 	if (currentOsakond) {
 		if (!WinExist("abimees_ester.ahk ahk_class AutoHotkey") and plugins.Ester) {
@@ -85,34 +93,44 @@ if !WinExist("Ester II Statsionaar") {
 		}
 		if (!WinExist("abimees_lastviewed.ahk ahk_class AutoHotkey") && plugins.LastViewed)
 			Run, %AHKPath% abimees_lastviewed.ahk
+		if (!WinExist(currentOsakond . " ahk_class ThunderRT6FormDC"))
+			ChangeDefaultOsakond()
 	}
-	ChangeDefaultOsakond()
 }
 
 if (!WinExist("abimees_labor.ahk ahk_class AutoHotkey") && plugins.Labor)
 	Run, %AHKPath% abimees_labor.ahk
 
-if (!WinExist("abimees_tellimused.ahk ahk_class AutoHotkey") && plugins.Tellimused)
-	Run, %AHKPath% abimees_tellimused.ahk
+; Deprecated
+;if (!WinExist("abimees_tellimused.ahk ahk_class AutoHotkey") && plugins.Tellimused)
+;	Run, %AHKPath% abimees_tellimused.ahk
 
-if (WinExist("Haiguslugu ahk_class ThunderRT6FormDC") && plugins.Haiguslugu) {
-	WinActivate, Haiguslugu ahk_class ThunderRT6FormDC
-	WinWaitActive, Haiguslugu ahk_class ThunderRT6FormDC,,1
+if (!WinExist("abimees_kiirklahvid.ahk ahk_class AutoHotkey") && plugins.Kiirklahvid)
+	Run, %AHKPath% abimees_kiirklahvid.ahk
+
+if (WinExist("Haiguslugu ahk_exe stats.exe") && plugins.Haiguslugu) {
+	WinActivate, Haiguslugu ahk_exe stats.exe
+	WinWaitActive, Haiguslugu ahk_exe stats.exe,,1
+	CreateHaiguslooAbivahend()
+}
+if (WinExist("Haiguslugu ahk_exe registr.exe") && plugins.Haiguslugu) {
+	WinActivate, Haiguslugu ahk_exe registr.exe
+	WinWaitActive, Haiguslugu ahk_exe registr.exe,,1
 	CreateHaiguslooAbivahend()
 }
 return
 
-TrayHaiguslugu:
+TrayMoodulHaiguslugu:
 	global HaiguslooAbivahendHwnd, UserDataFolder
 	if (plugins.Haiguslugu) {
-		Menu, Tray, Uncheck, Haigusloo abimees
+		Menu, TrayMoodulid, Uncheck, Haigusloo abimees
 		plugins.Haiguslugu := 0
 		IniWrite, 0, %UserDataFolder%\abimees.ini, Plugins, Haiguslugu
 		if (HaiguslooAbivahendHwnd)
 			if (WinExist("ahk_id " . HaiguslooAbivahendHwnd))
 				WinClose, ahk_id %HaiguslooAbivahendHwnd%
 	} else {
-		Menu, Tray, Check, Haigusloo abimees
+		Menu, TrayMoodulid, Check, Haigusloo abimees
 		plugins.Haiguslugu := 1
 		IniWrite, 1, %UserDataFolder%\abimees.ini, Plugins, Haiguslugu
 		if (WinExist("Haiguslugu ahk_class ThunderRT6FormDC")) {
@@ -135,12 +153,25 @@ TrayDefaultOsakondChange:
 	ChangeDefaultOsakond()
 	return
 
-TrayLastViewed:
-	TrayCheckUncheck("LastViewed", "Viimati vaadatud", "abimees_lastviewed.ahk")
+TrayMoodulLastViewed:
+	TrayMoodulidCheckUncheck("TrayMoodulid", "LastViewed", "Viimati vaadatud", "abimees_lastviewed.ahk")
 	return
 
-TrayTellimus:
-	TrayCheckUncheck("Tellimused", "Tellimuslehe abimees", "abimees_tellimused.ahk")
+; Deprecated
+;TrayMoodulTellimus:
+;	TrayMoodulidCheckUncheck("TrayMoodulid", "Tellimused", "Tellimuslehe abimees", "abimees_tellimused.ahk")
+;	return
+
+TrayMoodulKiirklahvid:
+	TrayMoodulidCheckUncheck("TrayMoodulid", "Kiirklahvid", "Kiirklahvid", "abimees_kiirklahvid.ahk")
+	return
+	
+TrayAutostartEsterStatsionaar:
+	TrayAutostartCheckUncheck("TrayAutostart", "EsterStatsionaar", "Ester II Statsionaar")
+	return
+	
+TrayAutostartEsterRegistratuur:
+	TrayAutostartCheckUncheck("TrayAutostart", "EsterRegistratuur", "Ester II Registratuur")
 	return
 
 TrayInfo:
@@ -191,15 +222,30 @@ CreateTrayMenu() {
 		Menu, Tray, Add
 	}
 	
-	Menu, Tray, Add, Haigusloo abimees, TrayHaiguslugu
+	Menu, TrayMoodulid, Add, Haigusloo abimees, TrayMoodulHaiguslugu
 	if (plugins.Haiguslugu)
-		Menu, Tray, Check, Haigusloo abimees
-	Menu, Tray, Add, Viimati vaadatud, TrayLastViewed
+		Menu, TrayMoodulid, Check, Haigusloo abimees
+	Menu, TrayMoodulid, Add, Viimati vaadatud, TrayMoodulLastViewed
 	if (plugins.LastViewed)
-		Menu, Tray, Check, Viimati vaadatud
-	Menu, Tray, Add, Tellimuslehe abimees, TrayTellimus
-	if (plugins.Tellimused)
-		Menu, Tray, Check, Tellimuslehe abimees
+		Menu, TrayMoodulid, Check, Viimati vaadatud
+; Deprecated
+;	Menu, TrayMoodulid, Add, Tellimuslehe abimees, TrayMoodulTellimus
+;	if (plugins.Tellimused)
+;		Menu, TrayMoodulid, Check, Tellimuslehe abimees
+	Menu, TrayMoodulid, Add, Kiirklahvid, TrayMoodulKiirklahvid
+	if (plugins.Kiirklahvid)
+		Menu, TrayMoodulid, Check, Kiirklahvid
+
+	Menu, Tray, Add, Moodulid, :TrayMoodulid	
+	
+	Menu, TrayAutostart, Add, Ester II Statsionaar, TrayAutostartEsterStatsionaar
+	if (autoStart.EsterStatsionaar)
+		Menu, TrayAutostart, Check, Ester II Statsionaar
+	Menu, TrayAutostart, Add, Ester II Registratuur, TrayAutostartEsterRegistratuur
+	if (autoStart.EsterRegistratuur)
+		Menu, TrayAutostart, Check, Ester II Registratuur
+	Menu, Tray, Add, Käivita automaatselt, :TrayAutostart
+		
 	Menu, Tray, Add
 	Menu, Tray, Add, Redigeeri kiirklahve, TrayKiirklahvid
 	Menu, Tray, Add, Redigeeri sätete faili, TrayChangeIni
@@ -209,18 +255,31 @@ CreateTrayMenu() {
 	Menu, Tray, Add, Sulge, TrayExit
 }
 
-TrayCheckUncheck(plugin, menuName, ahkName) {
+TrayAutostartCheckUncheck(trayName, pluginName, menuName) {
 	global UserDataFolder
-	if (plugins[plugin]) {
-		Menu, Tray, Uncheck, %menuName%
-		plugins[plugin] := 0
-		IniWrite, 0, %UserDataFolder%\abimees.ini, Plugins, %plugin%
+	if (autoStart[pluginName]) {
+		Menu, %trayName%, Uncheck, %menuName%
+		autoStart[pluginName] := 0
+		IniWrite, 0, %UserDataFolder%\abimees.ini, Autostart, %pluginName%
+	} else {
+		Menu, %trayName%, Check, %menuName%
+		autoStart[pluginName] := 1
+		IniWrite, 1, %UserDataFolder%\abimees.ini, Autostart, %pluginName%
+	}
+}
+
+TrayMoodulidCheckUncheck(trayName, pluginName, menuName, ahkName) {
+	global UserDataFolder
+	if (plugins[pluginName]) {
+		Menu, %trayName%, Uncheck, %menuName%
+		plugins[pluginName] := 0
+		IniWrite, 0, %UserDataFolder%\abimees.ini, Plugins, %pluginName%
 		if (WinExist(ahkName . " ahk_class AutoHotkey"))
 			WinClose, %ahkName% ahk_class AutoHotkey
 	} else {
-		Menu, Tray, Check, %menuName%
-		plugins[plugin] := 1
-		IniWrite, 1, %UserDataFolder%\abimees.ini, Plugins, %plugin%
+		Menu, %trayName%, Check, %menuName%
+		plugins[pluginName] := 1
+		IniWrite, 1, %UserDataFolder%\abimees.ini, Plugins, %pluginName%
 		if (!WinExist(ahkName . " ahk_class AutoHotkey"))
 			Run, %AHKPath% %ahkName%
 	}
@@ -257,6 +316,88 @@ OnLocationChangeMonitor(_hWinEventHook, _event, _hwnd) { ; https://msdn.microsof
 	WinMove, ahk_id %ownedAhkId%,, % _x+_w-10, % _y ; set the position of the window owned by owner
 }
 
+; ClassX_Callback(params*) {
+    ; return Object(A_EventInfo).OnLocationChangeMonitor(params*)
+; }
+
+; class GuiMoodul {
+	; STATIC ownerAhkId, ownedAhkId, hWinEventHook, alignment, xOffset, yOffset, callBack
+	; __New(alignment, xOffset, yOffset) {
+		; this.alignment := alignment
+		; this.xOffset := xOffset
+		; this.yOffset := yOffset
+		; this.callBack := RegisterCallback("ClassX_Callback", "", "", &this)
+	; }
+	; __Delete() {
+		; this.UnhookWinEvent(this.hWinEventHook)
+	; }
+	; OnLocationChangeMonitor(_hWinEventHook, _event, _hwnd) { ; https://msdn.microsoft.com/en-us/library/windows/desktop/dd373885(v=vs.85).aspx
+		; IF !_hwnd	; if the system sent the EVENT_OBJECT_LOCATIONCHANGE event for the caret:
+			; Return	; https://msdn.microsoft.com/en-us/library/windows/desktop/dd318066(v=vs.85).aspx
+		; IF (!(this.hWinEventHook)) {			; register a event hook function for EVENT_OBJECT_LOCATIONCHANGE := "0x800B"
+			; this.hWinEventHook := this.SetWinEventHook("0x800B", "0x800B",0, RegisterCallback("ClassX_Callback", "", "", &this),_hwnd,0,0)
+			; this.ownerAhkId := _hWinEventHook
+			; this.ownedAhkId := _event
+		; }
+		; WinGetPos,  _x,  _y, _w, _h, ahk_id %ownerAhkId%
+		; switch (this.alignment) {
+			; case "right":
+				; WinMove, ahk_id %ownedAhkId%,, % _x+_w+this.xOffset, % _y+this.yOffset ; set the position of the window owned by owner
+			; case "bottom":
+				; WinMove, ahk_id %ownedAhkId%,, % _x+this.xOffset, % _y+_h+this.yOffset ; set the position of the window owned by owner
+		; }
+	; }
+	; SetWinEventHook(_eventMin, _eventMax, _hmodWinEventProc, _lpfnWinEventProc, _idProcess, _idThread, _dwFlags) {
+		; DllCall("CoInitialize", "Uint", 0)
+		; return DllCall("SetWinEventHook","Uint",_eventMin,"Uint",_eventMax,"Ptr",_hmodWinEventProc,"Ptr",_lpfnWinEventProc,"Uint",_idProcess,"Uint",_idThread,"Uint",_dwFlags)
+	; }  ; cf. https://autohotkey.com/boards/viewtopic.php?t=830
+	; UnhookWinEvent(_hWinEventHook) {
+		; DllCall("UnhookWinEvent", "Ptr", _hWinEventHook)
+		; DllCall("CoUninitialize")
+	; }  ; cf. https://autohotkey.com/boards/viewtopic.php?t=830
+; } 
+
+OnLocationChangeMonitor2(_hWinEventHook, _event, _hwnd) { ; https://msdn.microsoft.com/en-us/library/windows/desktop/dd373885(v=vs.85).aspx
+	IF !_hwnd	; if the system sent the EVENT_OBJECT_LOCATIONCHANGE event for the caret:
+		Return	; https://msdn.microsoft.com/en-us/library/windows/desktop/dd318066(v=vs.85).aspx
+
+	global abimeesStats, abimeesAmb
+
+	WinGetTitle, ownerTitle, A
+	WinGetClass, ownerClass, A
+	WinGet, wExe, ProcessName, A
+	StringLower, wExe, wExe
+	if (InStr(ownerTitle, "Haiguslugu") && wExe == "stats.exe") {
+		IF (!(abimeesStats.hWinEventHook)) {			; register a event hook function for EVENT_OBJECT_LOCATIONCHANGE := "0x800B" 
+			abimeesStats.hWinEventHook := SetWinEventHook("0x800B", "0x800B",0, RegisterCallback("OnLocationChangeMonitor2"),_hwnd,0,0)
+			,abimeesStats.ownerAhkId := _hWinEventHook, abimeesStats.ownedAhkId := _event
+		}
+		ownerId := abimeesStats.ownerAhkId, ownedId := abimeesStats.ownedAhkId
+		WinGetPos,  _x,  _y, _w, _h, ahk_id %ownerId%
+		WinMove, ahk_id %ownedId%,, % _x+_w-10, % _y ; set the position of the window owned by owner
+	} else if (InStr(ownerTitle, "Haiguslugu") && wExe == "registr.exe") {
+		IF (!(abimeesAmb.hWinEventHook)) {			; register a event hook function for EVENT_OBJECT_LOCATIONCHANGE := "0x800B" 
+			abimeesAmb.hWinEventHook := SetWinEventHook("0x800B", "0x800B",0, RegisterCallback("OnLocationChangeMonitor2"),_hwnd,0,0)
+			,abimeesAmb.ownerAhkId := _hWinEventHook, abimeesAmb.ownedAhkId := _event
+		}
+		ownerId := abimeesAmb.ownerAhkId, ownedId := abimeesAmb.ownedAhkId
+		WinGetPos,  _x,  _y, _w, _h, ahk_id %ownerId%
+		WinMove, ahk_id %ownedId%,, % _x+_w-10, % _y ; set the position of the window owned by owner
+	} else if (InStr(ownerTitle, "Kirjelduse sisestamine") && wExe == "stats.exe") {
+		if (abimeesStats.kirjeldusOtsing.resetMoodul == 0 || !IsObject(abimeesStats.kirjeldusOtsing))
+			return
+		ownerId := abimeesStats.kirjeldusOtsing.ownerAhkId, ownedId := abimeesStats.kirjeldusOtsing.ownedAhkId
+		WinGetPos,  _x,  _y, _w, _h, Kirjelduse sisestamine ahk_id %ownerId%
+		WinMove, ahk_id %ownedId%,, % _x+8, % _y+_h-8 ; set the position of the window owned by owner
+	} else if (InStr(ownerTitle, "Kirjelduse sisestamine") && wExe == "registr.exe") {
+		if (abimeesAmb.kirjeldusOtsing.resetMoodul == 0 || !IsObject(abimeesAmb.kirjeldusOtsing))
+			return
+		ownerId := abimeesAmb.kirjeldusOtsing.ownerAhkId, ownedId := abimeesAmb.kirjeldusOtsing.ownedAhkId
+		WinGetPos,  _x,  _y, _w, _h, Kirjelduse sisestamine ahk_id %ownerId%
+		WinMove, ahk_id %ownedId%,, % _x+8, % _y+_h-8 ; set the position of the window owned by owner
+	}
+}
+
 OnLocationChangeMonitorOtsing(_hWinEventHook, _event, _hwnd) { ; https://msdn.microsoft.com/en-us/library/windows/desktop/dd373885(v=vs.85).aspx
 	STATIC ox, oy, nx, ny, ownerAhkId, ownedAhkId, hWinEventHook
 	global resetOtsing
@@ -280,7 +421,7 @@ UnhookWinEvent(_hWinEventHook) {
 	DllCall("CoUninitialize")
 }  ; cf. https://autohotkey.com/boards/viewtopic.php?t=830
 
-UpdateViewedPatients() {
+UpdateViewedPatients(exeName = "stats.exe") {
 	global UserDataFolder
 	IniRead maxPatients, %UserDataFolder%\abimees.ini, ViewedPatients, maxPatients, 15
 	patientList := []
@@ -327,7 +468,6 @@ ShellMessage( wParam,lParam )	; Gets all Shell Hook Messages
 		WinGetTitle, wTitle, ahk_id %wId%		; wTitle is Window Title
 		WinGetClass, wClass, ahk_id %wId%		; wClass is Window Class
 		WinGet, wExe, ProcessName, ahk_id %wId%	; wExe is Window Execute
-	
 		WinGetTitle, activeTitle, A
 		WinGet, activeExe, ProcessName, A
 		if (InStr(activeTitle, "Edge") or InStr(activeTitle, "Internet") or InStr(activeTitle, "Chrome") or InStr(activeExe, "msedge")) {
@@ -357,6 +497,7 @@ ShellMessage( wParam,lParam )	; Gets all Shell Hook Messages
 			;	}
 			;}
 		} else {
+			StringLower, wExe, wExe
 			if (wTitle="") {
 				WinGetTitle,TopWindow,A
 				if InStr(TopWindow, "Ester II Statsionaar") {
@@ -371,18 +512,54 @@ ShellMessage( wParam,lParam )	; Gets all Shell Hook Messages
 				}
 			}
 
-			if WinExist("Ester II Statsionaar")
+			if (WinExist("Ester II Statsionaar")) {
 				ControlGetText, currentOsakond, Edit1, Ester II Statsionaar
+				if (InStr(wTitle, currentOsakond) || InStr(wTitle, "Korrusvaade")) {
+					if (!WinExist("abimees_lastviewed.ahk ahk_class AutoHotkey") && plugins.LastViewed) {
+						Run, %AHKPath% abimees_lastviewed.ahk
+						WinWait, abimees_lastviewed.ahk ahk_class AutoHotkey,, 2
+						WinActivate, %wTitle%
+					}
+				}
+			}
 
-			if (InStr(wTitle, "Haiguslugu") && InStr(wClass, "ThunderRT6FormDC") && plugins.Haiguslugu) {
-				WinWaitActive, Haiguslugu,,1
-				CreateHaiguslooAbivahend()
+			if (InStr(wTitle, "Haiguslugu") && InStr(wClass, "ThunderRT6FormDC")) {
+				if (plugins.Haiguslugu) {
+					WinWaitActive, Haiguslugu,,1
+					CreateHaiguslooAbivahend()
+				}
 			} else if InStr(wTitle, "Ester II Statsionaar") {
 				CreateTrayMenu()
 				ChangeDefaultOsakond()
 			}
 		}
+	} else if (wParam == 2) {
+		global abimeesStats, abimeesAmb
+		SetFormat, Integer, Hex
+		wId := lParam + 0
+		SetFormat, Integer, D
+		WinGetTitle, wTitle, ahk_id %wId%		; wTitle is Window Title
+		WinGetClass, wClass, ahk_id %wId%		; wClass is Window Class
+		WinGet, wExe, ProcessName, ahk_id %wId%	; wExe is Window Execute
+		if (abimeesStats.ownerAhkId == wId) {
+			UnhookWinEvent(abimeesStats.hWinEventHook)
+			Gui, Statsionaar:Destroy
+			if WinExist("Patsient ahk_class ThunderRT6FormDC")
+				WinClose, Patsient ahk_class ThunderRT6FormDC
+		} else if (abimeesAmb.ownerAhkId == wId) {
+			UnhookWinEvent(abimeesAmb.hWinEventHook)
+			Gui, Registratuur:Destroy
+		} else if (abimeesStats.kirjeldusOtsing.ownerAhkId == wId) {
+			UnhookWinEvent(abimeesStats.kirjeldusOtsing.hWinEventHook)
+			Gui, StatsOtsing:Destroy
+			abimeesStats.kirjeldusOtsing.resetMoodul := 0
+		} else if (abimeesAmb.kirjeldusOtsing.ownerAhkId == wId) {
+			UnhookWinEvent(abimeesAmb.kirjeldusOtsing.hWinEventHook)
+			Gui, AmbOtsing:Destroy
+			abimeesAmb.kirjeldusOtsing.resetMoodul := 0
+		}
 
+		;TrayTip, Message, %wTitle% %wExe%
 	}
 }
 
@@ -494,7 +671,7 @@ WaitTextExist(searchText, click=40, clickCount=1, offsetX=0, nResult=1, maxTime=
 				if (offsetX != 0)
 					outX := (foundText[nResult]).1 + offsetX
 				CoordMode, Mouse
-				MouseClick, left, %outX%, %outY%, %clickCount%
+				MouseClick, left, %outX%, %outY%, %clickCount%, 0
 				CoordMode, Mouse, Client ; koordinaadid relatiivselt akna suhtes
 				Sleep, %click%
 			}
@@ -524,7 +701,7 @@ TextExist(searchText, click=0, inBrowser=1) {
 		outX := (foundText[1]).x, outY := (foundText[1]).y
 		if (click) {
 			CoordMode, Mouse
-			MouseClick, left, %outX%, %outY%, %clickCount%
+			MouseClick, left, %outX%, %outY%, %clickCount%, 0
 			CoordMode, Mouse, Client ; koordinaadid relatiivselt akna suhtes
 			Sleep, %click%
 		}
@@ -552,7 +729,7 @@ WaitImageExist(image, click=40, clickCount=1, inBrowser=1, maxTime=5000, correct
 				searchX := Min(wWindow, Max(0, outX + correctionX))
 				searchY := Min(hWindow, Max(0, outY + correctionY))
 				;MsgBox, outX:%outX% outY:%outY% cX:%correctionX% cY:%correctionY% searchX:%searchX% searchY:%searchY%
-				MouseClick, left, %searchX%, %searchY%, %clickCount%
+				MouseClick, left, %searchX%, %searchY%, %clickCount%, 0
 			}
 			return 1
 		}
@@ -585,55 +762,9 @@ ClickImageByName(name, sleepTime=40, clickCount=1, inBrowser=1, correctionX=0, c
 	if (ErrorLevel == 0) {
 		searchX := Min(wTellimus, Max(0, outX + correctionX))
 		searchY := Min(hTellimus, Max(0, outY + correctionY))
-		MouseClick, left, %searchX%, %searchY%, %clickCount%
+		MouseClick, left, %searchX%, %searchY%, %clickCount%, 0
 	}
 	Sleep, %sleepTime%
-}
-
-ValiAnaluusid(nimi, navigatsioon, analuusid, scrolling := 0) {
-	;WaitTextExist("ValiBlankett",,,,,10000)
-	WaitTextExist("ValiBlankett",,,,10000)
-	lenNav := navigatsioon.MaxIndex()
-	for i, e in navigatsioon {
-		if scrolling[i] {
-			n := scrolling[i]
-			Send, {Down %n%}
-			Sleep, 40
-		}
-		if (i != lenNav)
-			WaitTextExist(e,,,-15)
-		else
-			WaitTextExist(e)
-	}
-	for i,e in analuusid {
-		WaitTextExist(nimi . "_" . e,,,-10)
-	}
-	WaitTextExist("OK")
-	return
-}
-
-TelliKliiniline(tellimus) {
-	ValiAnaluusid("Kliiniline", ["Hematoloogia"], tellimus)
-	return
-}
-
-TelliBiokeemia(tellimus) {
-	ValiAnaluusid("Biokeemia", ["KliinilineKeemia","Biokeemia"], tellimus)
-	return
-}
-
-SaadaLabor() {
-	WaitTextExist("Edasi")
-	WaitTextExist("SaadaProovivõtule")
-	WaitTextExist("Kalender",,2,-5)
-	global SubmenuAeg, SubmenuTruki
-	relativeTime =
-	relativeTime += SubmenuAeg, days
-	FormatTime, relativeDate, %relativeTime%, dd.MM.yyyy
-	SendInput, %relativeDate%
-	;WaitTextExist("OK")
-	;if (SubmenuTruki)
-	;	WaitTextExist("TrukiKoikKoodid")
 }
 
 ChangeDefaultOsakond() {
@@ -648,33 +779,12 @@ ExitFunc(ExitReason, ExitCode) {
 		WinClose, abimees_otsing.ahk ahk_class AutoHotkey
 	if WinExist("abimees_lastviewed.ahk ahk_class AutoHotkey")
 		WinClose, abimees_lastviewed.ahk ahk_class AutoHotkey
-	if WinExist("abimees_labor.ahk ahk_class AutoHotkey")
-		WinClose, abimees_labor.ahk ahk_class AutoHotkey
-	if WinExist("abimees_tellimused.ahk ahk_class AutoHotkey")
-		WinClose, abimees_tellimused.ahk ahk_class AutoHotkey
+	if WinExist("abimees_kiirklahvid.ahk ahk_class AutoHotkey")
+		WinClose, abimees_kiirklahvid.ahk ahk_class AutoHotkey
+; Deprecated
+;	if WinExist("abimees_tellimused.ahk ahk_class AutoHotkey")
+;		WinClose, abimees_tellimused.ahk ahk_class AutoHotkey
 }
-
-
-#IfWinActive Haiguslugu ahk_class ThunderRT6FormDC
-^r::
-	FindAndOpenDocument("Ravipäevik")
-	return
-
-^!a::
-	FindAndOpenDocument("Anamnees")
-	return
-
-^l::
-	AvaLabor()
-	return
-#IfWinActive
-
-#IfWinActive Tellimused
-~^+s::
-	global JS
-	SendJavascript("TellimusedJS")
-	return
-#IfWinActive	
 	
 #IfWinActive Isikuandmed ahk_class ThunderRT6FormDC
 ~^c::
@@ -685,7 +795,6 @@ ExitFunc(ExitReason, ExitCode) {
 	
 	return
 #IfWinActive 
-
 
 ~^+r::
 	Reload
@@ -699,6 +808,11 @@ ExitFunc(ExitReason, ExitCode) {
 		CreateSearchBox()
 	}
 	return
+~^a::
+	WinGetActiveTitle, winTitle
+	WinGet, winExe, ProcessName, %winTitle%
+	SendMessage, 0xB1, 0, -1, ThunderRT6TextBox1, Kirjelduse sisestamine ahk_exe %winExe% ; EM_SETSEL
+	return
 #IfWinActive
 
 ~LButton::
@@ -706,63 +820,67 @@ ExitFunc(ExitReason, ExitCode) {
 	CoordMode, Mouse, Screen
 	MouseGetPos, currentMousexPos, currentMouseyPos 
 	CoordMode, Mouse, Client
-	correctedXCheck := lastMousexPos <= currentMousexPos + DoubleClickError && lastMousexPos >= currentMousexPos - DoubleClickError
-	correctedYCheck := lastMouseyPos <= currentMouseyPos + DoubleClickError && lastMouseyPos >= currentMouseyPos - DoubleClickError
+	correctedXCheck := (currentMousexPos <= (lastMousexPos + DoubleClickError)) && (currentMousexPos >= (lastMousexPos - DoubleClickError))
+	correctedYCheck := (currentMouseyPos <= (lastMouseyPos + DoubleClickError)) && (currentMouseyPos >= (lastMouseyPos - DoubleClickError))
+	lastMousexPos := currentMousexPos, 	lastMouseyPos := currentMouseyPos
 	;if (A_ThisHotkey = A_PriorHotkey and A_TimeSincePriorHotkey < DoubleClickTime and currentMousexPos = lastMousexPos and currentMouseyPos = lastMouseyPos)
 	if (A_ThisHotkey = A_PriorHotkey and A_TimeSincePriorHotkey < DoubleClickTime and correctedXCheck and correctedYCheck)
 	{
-		MouseGetPos, currentMousexPos, currentMouseyPos
+		MouseGetPos, currentMousexPos, currentMouseyPos,, activeControl
 		SetTitleMatchMode, 2
-		if !WinActive("ahk_class ThunderRT6FormDC") {
+		;if !WinActive("ahk_class ThunderRT6FormDC") {
 			;TrayTip, Message, Wrong window
-			return
-		}
+		;	return
+		;}
 		global currentOsakond
 		WinGetActiveTitle, winTitle
 		WinGet, winID, ID, %winTitle%
+		WinGet, winExe, ProcessName, %winTitle%
+		StringLower, winExe, winExe
+		if !(winExe == "stats.exe" || "registr.exe")
+			return
+		
 		if InStr(winTitle, "Korrusvaade") or InStr(winTitle, currentOsakond) or InStr(winTitle, "Palatiosakond") {
-			ControlGetPos, ctrlX, ctrlY, ctrlW, ctrlH, SPR32X30_SpreadSheet1, A
+			ControlGetPos, ctrlX, ctrlY, ctrlW, ctrlH, SPR32X30_SpreadSheet1, A	
 			if !((currentMouseyPos > ctrlY && currentMouseyPos < (ctrlY+ctrlH-45)) && (currentMousexPos > ctrlX && currentMousexPos < (ctrlX+ctrlW-20)))
 				return
+			Sleep, 150 ; Oota veidi, muidu mõnikord ei avane valikudialoogi ja hakkab kleebiseid trükkima
 			SetControlDelay -1 ; muudab ControlClicki usaldusväärsemaks
-			if InStr(winTitle, "Palatiosakond")
-				ControlClick, ThunderRT6CommandButton9, %currentOsakond% ahk_class ThunderRT6FormDC,,,, NA 
-			else
-				ControlClick, ThunderRT6CommandButton21, %currentOsakond% ahk_class ThunderRT6FormDC,,,, NA 
-			Sleep,40
-			Send,{Down 2}
-			Sleep,40
-			Send,{Enter}
+			if InStr(winTitle, "Palatiosakond") {
+				ControlClick, ThunderRT6CommandButton9, %currentOsakond% ahk_exe %winExe%,,,, NA 
+			} else {
+				ControlClick, ThunderRT6CommandButton21, %currentOsakond% ahk_exe %winExe%,,,, NA 
+			}
+			Sleep, 150
+			Send, k
+			;WaitTextExist("AvaHaigusluguMenu",,,,,,0)
 		} else if InStr(winTitle, "Haiguslugu") {
-			;ControlGet, selected, List, Count, SPR32X30_SpreadSheet1, Haiguslugu
-			;MsgBox, %selected%
 			PixelGetColor, color, currentMousexPos, currentMouseyPos
 			ControlGetPos, ctrlX, ctrlY, ctrlW, ctrlH, SPR32X30_SpreadSheet1, A
 			ctrlX := ctrlX - 8 ; Control vs Window koordinaadid erinevad, korrektsioon
 			ctrlY := ctrlY - 16
 			; Kontrolli kas hiir asub valikute kastis
 			if ((currentMouseyPos > ctrlY && currentMouseyPos < (ctrlY+ctrlH-31)) && (currentMousexPos > ctrlX && currentMousexPos < (ctrlX+ctrlW-20))) {
-			;if (currentMouseyPos > 330) && (currentMousexPos < 845) && (HasVal([0x000000, 0xFFFFFF, 0xC0DCC0, 0xD77800, 0xFF9933, 0x3F233F], color)) {
 				Sleep, 200 ; Oota veidi et rida saaks valitud
 				SetControlDelay -1 ; muudab ControlClicki usaldusväärsemaks
-				ControlGetText, selectedText, SPR32X30EditHScroll1, Haiguslugu ahk_class ThunderRT6FormDC
+				ControlGetText, selectedText, SPR32X30EditHScroll1, Haiguslugu ahk_exe %winExe%
 				if (InStr("Anamnees,Ravipäevik,Konsultatsiooni otsus", Trim(selectedText))) {
-					if WinExist("Kirjelduse sisestamine ahk_class ThunderRT6FormDC") {
-						WinActivate, Kirjelduse sisestamine ahk_class ThunderRT6FormDC
+					if WinExist("Kirjelduse sisestamine ahk_exe " . winExe) {
+						WinActivate, Kirjelduse sisestamine ahk_exe %winExe%
 						MsgBox, 51, Hoiatus, "Kirjelduse sisestamine" aken on juba avatud. Kas soovid enne jätkamist eelneva teksti salvestada?
 						IfMsgBox, Yes 
 						{
-							ControlClick, ThunderRT6CommandButton3, Kirjelduse sisestamine ahk_class ThunderRT6FormDC,,,,NA
+							ControlClick, ThunderRT6CommandButton3, Kirjelduse sisestamine ahk_exe %winExe%,,,,NA
 						} else {
 							IfMsgBox, No
-								ControlClick, ThunderRT6CommandButton4, Kirjelduse sisestamine ahk_class ThunderRT6FormDC,,,,NA
+								ControlClick, ThunderRT6CommandButton4, Kirjelduse sisestamine ahk_exe %winExe%,,,,NA
 							else 
 								return
 						}
-						WinActivate, Haiguslugu ahk_class ThunderRT6FormDC
+						WinActivate, Haiguslugu ahk_exe %winExe%
 					}
 				}
-				ControlClick, ThunderRT6CommandButton33, Haiguslugu ahk_class ThunderRT6FormDC,,,, NA ; kliki Täpsemalt nupule
+				ControlClick, % (winExe == "stats.exe") ? "ThunderRT6CommandButton33" : "ThunderRT6CommandButton20", Haiguslugu ahk_exe %winExe%,,,, NA ; kliki Täpsemalt nupule
 				WinWaitNotActive, ahk_id %winID%,,1
 				if ErrorLevel
 					return
@@ -770,9 +888,9 @@ ExitFunc(ExitReason, ExitCode) {
 				WinGetActiveTitle, newWinTitle
 				WinGet, newWinID, ID, %newWinTitle%
 				if InStr(newWinTitle, "Haiguslugu") {
-					ControlGetText, noBut, Button2, Haiguslugu ahk_class ThunderRT6FormDC
+					ControlGetText, noBut, Button2, Haiguslugu ahk_exe %winExe%
 					if (noBut == "&No") {
-						ControlClick, Button2, Haiguslugu ahk_class ThunderRT6FormDC,,,, NA
+						ControlClick, Button2, Haiguslugu ahk_exe %winExe%,,,, NA
 						WinWaitNotActive, ahk_id %newWinID%,,1
 						WinGetActiveTitle, newWinTitle
 						WinGet, newWinID, ID, %newWinTitle%
@@ -781,18 +899,24 @@ ExitFunc(ExitReason, ExitCode) {
 				;if InStr(newWinTitle, "Kirjelduse sisestamine") {
 				;	Send, ^{End}
 				if InStr(newWinTitle, "Labor") {
-					WaitControlVisible("ThunderRT6CheckBox3","Labor ahk_class ThunderRT6FormDC", 3000)
-					ControlClick, ThunderRT6CheckBox3, Labor ahk_class ThunderRT6FormDC,,,, NA
+					WaitControlVisible("ThunderRT6CheckBox3","Labor ahk_exe " . winExe, 3000)
+					ControlClick, % (winExe == "stats.exe") ? "ThunderRT6CheckBox3" : "ThunderRT6CheckBox2", Labor ahk_exe %winExe%,,,, NA
 				}
 			}
 		} else if InStr(winTitle, "Labor") {
-			ControlGetPos, ctrlX, ctrlY, ctrlW, ctrlH, SPR32X30_SpreadSheet2, A
+			ControlGet, SS1, Visible,, SPR32X30_SpreadSheet1, A 
+			if (SS1)
+				ControlGetPos, ctrlX, ctrlY, ctrlW, ctrlH, SPR32X30_SpreadSheet1, A ; Kõikide proovide tabel
+			else
+				ControlGetPos, ctrlX, ctrlY, ctrlW, ctrlH, SPR32X30_SpreadSheet2, A ; Ühe proovi analüüside tabel
 			ctrlY := ctrlY - 30
 			PixelGetColor, color, currentMousexPos, currentMouseyPos
 			if ((currentMouseyPos > ctrlY && currentMouseyPos < (ctrlY+ctrlH-15)) && (currentMousexPos > ctrlX && currentMousexPos < (ctrlX+ctrlW-20))) {
-			;if (currentMouseyPos > 99) && (currentMousexPos > 346) && (HasVal([0x000000, 0xFFFFFF, 0xC0DCC0, 0xD77800, 0xFF9933, 0x3F233F], color)) {
 				SetControlDelay -1 ; muudab ControlClicki usaldusväärsemaks
-				ControlClick, ThunderRT6CommandButton17, Labor ahk_class ThunderRT6FormDC,,,, NA ; kliki Areng
+				if (SS1)
+					ControlClick, ThunderRT6CheckBox3, Labor ahk_exe %winExe%,,,, NA ; kliki Filtreeri
+				else
+					ControlClick, ThunderRT6CommandButton17, Labor ahk_exe %winExe%,,,, NA ; kliki Areng
 			}
 		} else if InStr(winTitle, "Valimine tabelist ISIK,AADRESSID,asukohad") {
 			ControlGetPos, ctrlX, ctrlY, ctrlW, ctrlH, SPR32X30_SpreadSheet1, A
@@ -800,25 +924,65 @@ ExitFunc(ExitReason, ExitCode) {
 			ctrlY := ctrlY - 32
 			PixelGetColor, color, currentMousexPos, currentMouseyPos
 			if ((currentMouseyPos > ctrlY && currentMouseyPos < (ctrlY+ctrlH-15)) && (currentMousexPos > ctrlX && currentMousexPos < (ctrlX+ctrlW-20))) {
-			;if (currentMouseyPos > 16) && (currentMousexPos > 7) && (HasVal([0x000000, 0xFFFFFF, 0xC0DCC0, 0xD77800, 0xFF9933, 0x3F233F], color)) {
 				SetControlDelay -1
-				ControlClick, ThunderRT6CommandButton8, Valimine tabelist ISIK ahk_class ThunderRT6FormDC,,,, NA
+				ControlClick, ThunderRT6CommandButton8, Valimine tabelist ISIK ahk_exe %winExe%,,,, NA ; valib patsiendi Patsiendi aknasse
 				Sleep, 300
-				ControlClick, ThunderRT6CommandButton3, Patsient ahk_class ThunderRT6FormDC,,,, NA
+				ControlClick, ThunderRT6CommandButton3, Patsient ahk_exe %winExe%,,,, NA ; avab valitud patsiendi
+			}
+		} else if (winExe == "digilugu.klient.exe") {
+			SetControlDelay -1 ; muudab ControlClicki usaldusväärsemaks
+			if (activeControl == "WindowsForms10.Window.8.app.0.262c0e4_r6_ad12") {
+				ControlClick, WindowsForms10.BUTTON.app.0.262c0e4_r6_ad13, %winTitle%,,,, NA
 			}
 		}
 	} else {
 		MouseGetPos,,, hoverWindow, hoverControl
 		WinGetClass, hoverClass, ahk_id %hoverWindow%
-		if !(hoverClass == "ThunderRT6FormDC")
+		WinGetTitle, hoverTitle, ahk_id %hoverWindow%
+		
+		if !(InStr(hoverClass, "ThunderRT6Form"))
 			return
-		if (HasVal(["ThunderRT6CommandButton9","ThunderRT6CommandButton10","ThunderRT6CommandButton11","ThunderRT6CommandButton12","ThunderRT6CommandButton13","ThunderRT6CommandButton14"], hoverControl)) {
-			;TrayTip, Message, %hoverControl%
-			ControlFocus, ThunderRT6TextBox27, Labor ahk_class ThunderRT6FormDC
-			ControlClick, %hoverControl%, Labor ahk_class ThunderRT6FormDC
-		}	
+		if (InStr(hoverTitle, "Labor")) {
+			if (HasVal(["ThunderRT6CommandButton9","ThunderRT6CommandButton10","ThunderRT6CommandButton11","ThunderRT6CommandButton12","ThunderRT6CommandButton13","ThunderRT6CommandButton14"], hoverControl)) {
+				;TrayTip, Message, %hoverControl%
+				ControlFocus, ThunderRT6TextBox27, Labor ahk_class ThunderRT6FormDC
+				MouseClick, left
+				;ControlClick, %hoverControl%, Labor ahk_class ThunderRT6FormDC
+			}	
+		} else if (InStr(hoverTitle, "Ambulatoorne")) {
+			WinGetActiveTitle, activeTitle
+			ControlGetFocus, activeControl, %activeTitle%
+			if (hoverControl == "ThunderRT6ListBox1") {
+				ih := InputHook(,"{Enter}{Esc}")
+				ih.Start()
+				inp := ""
+				lastChangeTime := A_TickCount
+				While (InStr(activeTitle, "Ambulatoorne") and (activeControl == "ThunderRT6ListBox1")) {
+					if ((A_TickCount - lastChangeTime) > 2000) {
+						if (inp != "") {
+							inp := ""
+							ih.Stop()
+							ih.Start()
+						}
+					}
+					new_inp := ih.Input
+					if (inp != new_inp) {
+						inp := new_inp
+						LB_SELECTSTRING := 0x018C
+						SendMessage, % LB_SELECTSTRING, 3, &inp, ThunderRT6ListBox1, Ambulatoorne vastuvõtt
+						;TrayTip, Message, %inp% Error: %ErrorLevel%
+						lastChangeTime := A_TickCount
+						ToolTip, % inp, % A_CaretX + 15, % A_CaretY
+						SetTimer, RemoveToolTip, -2000
+					}
+					WinGetActiveTitle, activeTitle
+					ControlGetFocus, activeControl, %activeTitle%
+					Sleep, 50
+				}
+				ih.Stop()
+			}
+		}
 	}
-	lastMousexPos := currentMousexPos, lastMouseyPos := currentMouseyPos
 	return
 
 ~MButton::
@@ -826,70 +990,21 @@ ExitFunc(ExitReason, ExitCode) {
 	if WinActive("Haiguslugu ahk_class ThunderRT6FormDC") {
 		global currentOsakond
 		MouseGetPos, currentMousexPos, currentMouseyPos
-		PixelGetColor, color, currentMousexPos, currentMouseyPos
-		if (currentMouseyPos > 330) && (currentMousexPos < 845) && (HasVal([0x000000, 0xFFFFFF, 0xC0DCC0, 0xD77800, 0xFF9933, 0x3F233F], color)) {
+		WinGet, winExe, ProcessName, A
+		ControlGetPos, ctrlX, ctrlY, ctrlW, ctrlH, SPR32X30_SpreadSheet1, A
+		ctrlX := ctrlX - 8 ; Control vs Window koordinaadid erinevad, korrektsioon
+		ctrlY := ctrlY - 16
+		; Kontrolli kas hiir asub valikute kastis
+		if ((currentMouseyPos > ctrlY && currentMouseyPos < (ctrlY+ctrlH-31)) && (currentMousexPos > ctrlX && currentMousexPos < (ctrlX+ctrlW-20))) {
 			MouseClick, Left
 			Sleep, 100
-			KlikiTellimuseNupule(10)
-			WinWaitActive, Tellimus,,1
-			if (!WinExist("abimees_tellimused.ahk ahk_class AutoHotkey")) {
-				WaitBrowserLoaded()
-				WaitTextExist("Tellimused1kuu",,,,,1000)
-			}
+			KlikiTellimuseNupule(10, winExe)
 		}
 	}
 	return
+	
 
-
-#h::  ; Win+H hotkey
-	; Get the text currently selected. The clipboard is used instead of
-	; "ControlGet Selected" because it works in a greater variety of editors
-	; (namely word processors).  Save the current clipboard contents to be
-	; restored later. Although this handles only plain text, it seems better
-	; than nothing:
-	AutoTrim Off  ; Retain any leading and trailing whitespace on the clipboard.
-	ClipboardOld := ClipboardAll
-	Clipboard := ""  ; Must start off blank for detection to work.
-	Send ^c
-	ClipWait 1
-	if ErrorLevel  ; ClipWait timed out.
-	    return
-	; Replace CRLF and/or LF with `n for use in a "send-raw" hotstring:
-	; The same is done for any other characters that might otherwise
-	; be a problem in raw mode:
-	StringReplace, Hotstring, Clipboard, ``, ````, All  ; Do this replacement first to avoid interfering with the others below.
-	StringReplace, Hotstring, Hotstring, `r`n, ``r, All  ; Using `r works better than `n in MS Word, etc.
-	StringReplace, Hotstring, Hotstring, `n, ``r, All
-	StringReplace, Hotstring, Hotstring, %A_Tab%, ``t, All
-	StringReplace, Hotstring, Hotstring, `;, ```;, All
-	Clipboard := ClipboardOld  ; Restore previous contents of clipboard.
-	; This will move the InputBox's caret to a more friendly position:
-	SetTimer, MoveCaret, 10
-	; Show the InputBox, providing the default hotstring:
-	inputBoxText := "Kirjuta oma kiirklahv valitud kohta. Mõned kasulikud muudatused:`n:*: Lõpetab teksi koheselt ilma Enterit vajutamata`n:C: Muudab tõstutundlikuks`nNäide: :R:btw`::by the way`n"
-	InputBox, Hotstring, Uus kiirklahv, %inputBoxText%,,,,,,,, :r0:`::%Hotstring%
-	if ErrorLevel  ; The user pressed Cancel.
-	    return
-	if InStr(Hotstring, ":r0`:::")
-	{
-	    MsgBox Lühendit ei leitud ning kiirklahvi ei lisatud.
-	    return
-	}
-	; Otherwise, add the hotstring and reload the script:
-	global UserDataFolder
-	FileAppend, `n%Hotstring%, %UserDataFolder%\kiirklahvid.ahk  ; Put a `n at the beginning in case file lacks a blank line at its end.
-	Reload
-	Sleep 200 ; If successful, the reload will close this instance during the Sleep, so the line below will never be reached.
-	MsgBox, 4,, Näib et lisatud kiirklahv oli vigane. Kas soovid avada kiirklahvi faili redigeerimiseks? Katkine kiirklahv on selle faili lõpus.
-	IfMsgBox, Yes, Run C:\Windows\Notepad.exe "%UserDataFolder%\kiirklahvid.ahk"
+RemoveToolTip:
+	ToolTip
 	return
-
-MoveCaret:
-	IfWinNotActive, Uus kiirklahv
-	    return
-	; Otherwise, move the InputBox's insertion point to where the user will type the abbreviation.
-	Send {Home}{Right 4}
-	SetTimer, MoveCaret, Off
-	return
-
-#include *i Y:\UserData\Abimees\kiirklahvid.ahk
+;#include *i Y:\UserData\Abimees\kiirklahvid.ahk

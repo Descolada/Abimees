@@ -5,7 +5,7 @@ SendMode Input  ; Recommended for new scripts due to its superior speed and reli
 CoordMode, Mouse, Client ; koordinaadid relatiivselt akna suhtes
 CoordMode, Pixel, Client 
 SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
-SetBatchLines, 1000
+SetBatchLines, 50ms
 SetTitleMatchMode, 2
 
 #include <GlobalVariables>
@@ -14,7 +14,7 @@ SetTitleMatchMode, 2
 
 global currentPage := "", JSUrl, JSFile
 IniRead, JSUrl, %UserDataFolder%\abimees.ini, Tellimused, JSUrl, https://cdn.jsdelivr.net/gh/Descolada/Abimees@latest/Lib/Javascript/
-IniRead, JSFile, %UserDataFolder%\abimees.ini, Tellimused, JSFile, TellimusedJS.js
+IniRead, JSFile, %UserDataFolder%\abimees.ini, Tellimused, JSFile, default.js
 
 
 DllCall( "RegisterShellHookWindow", UInt, A_ScriptHwnd )

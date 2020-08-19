@@ -120,7 +120,7 @@ ShellMessage( wParam,lParam )	; Gets all Shell Hook Messages
 				Loop {
 					IniRead, ready, %UserDataFolder%\abimees.ini, General, HaigusluguReady
 					Sleep, 200
-				} Until ((A_TickCount-startTime) > 3000 || ready)
+				} Until ((A_TickCount-startTime) > 5000 || ready)
 				IniWrite, 0, %UserDataFolder%\abimees.ini, General, HaigusluguReady
 			} else {
 				UpdateViewedPatients()
