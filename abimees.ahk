@@ -931,7 +931,7 @@ ExitFunc(ExitReason, ExitCode) {
 			}
 		} else if (winExe == "digilugu.klient.exe") {
 			SetControlDelay -1 ; muudab ControlClicki usaldusväärsemaks
-			if (activeControl == "WindowsForms10.Window.8.app.0.262c0e4_r6_ad12") {
+			if (activeControl) {
 				ControlClick, WindowsForms10.BUTTON.app.0.262c0e4_r6_ad13, %winTitle%,,,, NA
 			}
 		}
@@ -998,7 +998,7 @@ ExitFunc(ExitReason, ExitCode) {
 		if ((currentMouseyPos > ctrlY && currentMouseyPos < (ctrlY+ctrlH-31)) && (currentMousexPos > ctrlX && currentMousexPos < (ctrlX+ctrlW-20))) {
 			MouseClick, Left
 			Sleep, 100
-			KlikiTellimuseNupule(10, winExe)
+			KlikiTellimuseNupule(9, winExe)
 		}
 	}
 	return
