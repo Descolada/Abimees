@@ -37,7 +37,7 @@ if (!FileExist(UserDataFolder "\kiirklahvid.ahk")) {
 }
 
 ;#NoTrayIcon  ; Eemalda kommentaar kui ei soovi ikooni
-Menu, Tray, Icon, %A_ScriptDir%\keyboard.ico
+Menu, Tray, Icon, %A_ScriptDir%\Resources\keyboard.ico
 Menu, Tray, Tip, Kiirklahvid
 Menu, Tray, NoMainWindow
 

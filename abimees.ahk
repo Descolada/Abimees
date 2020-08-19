@@ -44,7 +44,7 @@ IniRead, defaultOsakond, %UserDataFolder%\abimees.ini, General, defaultOsakond, 
 IniWrite, 0, %UserDataFolder%\abimees.ini, General, HaigusluguReady
 
 ;#NoTrayIcon  ; Eemalda kommentaar kui ei soovi ikooni
-Menu, Tray, Icon, %A_ScriptDir%\metallic_a.ico
+Menu, Tray, Icon, %A_ScriptDir%\Resources\metallic_a.ico
 Menu, Tray, Tip, Abimees
 Menu, Tray, NoMainWindow
 
