@@ -27,6 +27,8 @@ IniRead, output, %UserDataFolder%\abimees.ini, Autostart, EsterStatsionaar, 0
 autoStart.EsterStatsionaar := output
 IniRead, output, %UserDataFolder%\abimees.ini, Autostart, EsterRegistratuur, 0
 autoStart.EsterRegistratuur := output
+IniRead, output, %UserDataFolder%\abimees.ini, Autostart, Abimees, 0
+autoStart.Abimees := output
 
 global ImageLibrary := {}
 ImageLibrary["Ravipäevik"] := "|<Win7>*127$53.y0081802V2000000124000000248t5SCCFIjU++W2WWeEXmZ4xwdMV8Z+++1Gd2F4IIIF5+4S8j7b2+8000E00008|<Win10>*121$51.y00E2U054E0000008WCFLXXYJAGGGYYYYeyCGIHboZYWFWWYUMiWGAIYYX5IPlWwwQMd000400000000U0000U"

@@ -52,11 +52,10 @@ CreateHaiguslooAbivahend() {
 	GUI, %guiName%:Show, x%w_adjusted_x% y%y_haigus% w%window_w% h%adjusted_h_haigus%, %windowName%
 	WinActivate, Haiguslugu ahk_exe %ownerExe%
 
-	global HaiguslooAbivahendHwnd := owned
 	global resetAbimees = 1
 	;abimeesStats.resetMoodul := 1
 
-	OnLocationChangeMonitor2(owner, owned, PID) ; INIT
+	OnLocationChangeMonitor(owner, owned, PID) ; INIT
 
 	IniWrite, 1, %UserDataFolder%\abimees.ini, General, HaigusluguReady
 
@@ -164,9 +163,11 @@ FindAndOpenDocument(exeName, doc, backupDoc = "") {
 		TrayTip, Viga!, Ava kõigepealt haiguslugu
 		return
 	}
+	;WinClose, Kirjelduse sisestamine ahk_exe %exeName%
 
-	if WinExist("Kirjelduse sisestamine ahk_exe " . exeName) {
+	if ((doc == "Anamnees" || doc == "Ravipäevik") && WinExist("Kirjelduse sisestamine ahk_exe " . exeName)) {
 		WinActivate, Kirjelduse sisestamine ahk_exe %exeName%
+
 		MsgBox, 51, Hoiatus, "Kirjelduse sisestamine" aken on juba avatud. Kas soovid enne jätkamist eelneva teksti salvestada?
 		IfMsgBox, Yes 
 		{
@@ -197,37 +198,61 @@ FindAndOpenDocument(exeName, doc, backupDoc = "") {
 
 	;WaitTextExist(searchText, click=40, clickCount=1, offsetX=0, nResult=1, maxTime=5000, inBrowser=1)
 	if (!WaitTextExist(doc,200,,,,200,0)) {
-		if (backupDoc != "") {
-			if (!WaitTextExist(backupDoc,200,,,,0,0)) {
-				TrayTip, Viga!, Ei leidnud pilti nimega %doc%
-				return
+ 		if (doc == "Anamnees" || doc == "Ravipäevik") {
+			MsgBox, 36, Dokument, Dokumenti %doc% ei leitud. Kas soovid selle luua?
+			IfMsgBox, Yes 
+			{
+				ControlClick, ThunderRT6CommandButton53, Haiguslugu ahk_exe %exeName%,,,, NA
+				Sleep, 200
+				Send, {Up}
+				WinWaitNotActive, Haiguslugu ahk_exe %exeName%,,1
+				ControlClick, Button1, A,,,, NA
+				Sleep, 100
+				if (WinActive("Haiguslugu ahk_exe " . exeName)) {
+					SendEvent, %doc%
+					Send, {Tab}
+				}
+			}
+		} else {
+			if (backupDoc != "") {
+				if (!WaitTextExist(backupDoc,200,,,,0,0)) {
+					if (doc == "Epikriis") {
+						ControlClick, ThunderRT6CheckBox1, Haiguslugu ahk_exe %exeName%,,,, NA
+						ControlClick, % (exeName == "stats.exe") ? "ThunderRT6CommandButton45" : "ThunderRT6CommandButton29", Haiguslugu ahk_exe %exeName%,,,, NA
+					} else
+						TrayTip, Viga!, Ei leidnud pilti nimega %doc%
+					return
+				}
 			}
 		}
 	}
-	Sleep, 200
-
+	
 	if WinActive("Valimine tabelist ahk_exe " . exeName) {
-		ControlClick, ThunderRT6CommandButton7, Valimine tabelist ahk_class ThunderRT6FormDC,,,, NA ; Sulge "Valimine tabelist"
-		WinWaitNotActive, Valimine tabelist ahk_class ThunderRT6FormDC
+		ControlClick, ThunderRT6CommandButton7, Valimine tabelist ahk_exe %exeName%,,,, NA ; Sulge "Valimine tabelist"
+		WinWaitNotActive, Valimine tabelist ahk_exe %exeName%, 1
 	}
 	ControlClick, % (exeName == "stats.exe") ? "ThunderRT6CommandButton33" : "ThunderRT6CommandButton20", Haiguslugu ahk_exe %exeName%,,,, NA ; kliki Täpsemalt nupule
 
 	WinWaitNotActive, ahk_id %winID%,,1
 	if ErrorLevel
 		return
+	Sleep, 200
+	
 	if WinActive("Haiguslugu ahk_class ThunderRT6FormDC") {
 		ControlGetText, noBut, Button2, Haiguslugu ahk_exe %exeName%
 		if (noBut == "&No") {
-			ControlClick, Button2, Haiguslugu ahk_class ThunderRT6FormDC,,,, NA
+			ControlClick, Button2, Haiguslugu ahk_exe %exeName%,,,, NA
 			Sleep, 100
 		}
 	}
 
-	if WinExist("Valimine tabelist ahk_class ThunderRT6FormDC") {
-		ControlClick, ThunderRT6CommandButton7, Valimine tabelist ahk_class ThunderRT6FormDC,,,, NA ; Sulge "Valimine tabelist"
+	if WinExist("Valimine tabelist ahk_exe " . exeName) {
+		ControlClick, ThunderRT6CommandButton7, Valimine tabelist ahk_exe %exeName%,,,, NA ; Sulge "Valimine tabelist"
+		WinWaitNotActive, Valimine tabelist ahk_exe %exeName%, 1
 	}
-	If WinExist("Kirjelduse sisestamine ahk_class ThunderRT6FormDC ahk_exe " . exeName)
-		WinActivate, Kirjelduse sisestamine ahk_class ThunderRT6FormDC ahk_exe %exeName%
+	Sleep, 200
+	If WinExist("Kirjelduse sisestamine ahk_exe " . exeName)
+		WinActivate, Kirjelduse sisestamine ahk_exe %exeName%
 	return
 }
 
