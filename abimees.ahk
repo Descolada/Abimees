@@ -1,20 +1,22 @@
 ﻿#NoEnv
 #SingleInstance force
-SendMode Input  ; Recommended for new scripts due to its superior speed and reliability.
-CoordMode, Mouse, Client ; koordinaadid relatiivselt akna suhtes
+SendMode Input  ; Kiirem ja turvalisem teksti kirjutamine
+CoordMode, Mouse, Client ; hiire liigutamise koordinaadid relatiivselt akna suhtes
 CoordMode, Pixel, Client 
 SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 SetBatchLines, 50ms
 #Hotstring C R
-#Hotstring EndChars `n `t  ; TAB, SPACE, ja ENTER kutsuvad ainult kiirklahvid esile
+#Hotstring EndChars `n `t  ; ainult TAB, SPACE, ja ENTER kutsuvad kiirklahvid esile
 #MaxHotkeysPerInterval 150
 SetTitleMatchMode, 2
 DetectHiddenWindows, On
-SetWinDelay, -1
+SetWinDelay, -1 ; kiirem akende manipuleerimine
+SetControlDelay, -1 ; muudab ControlClicki usaldusväärsemaks
 
 global UserDataRoot := "Y:\UserData"
-global UserDataFolder := "Y:\UserData\Abimees"  ; Kui seda muuta siis peab muutma ka kõige viimast rida (#include kiirklahvid)
+global UserDataFolder := "Y:\UserData\Abimees"  ; kaust kus on konfiguratsioonifailid
 
+; kui konfiguratsioonifaile ei eksisteeri siis on aeg need luua
 if (!FileExist(UserDataRoot)) {
 	FileCreateDir, %UserDataRoot%
 	FileSetAttrib, +H, %UserDataRoot%
@@ -23,31 +25,38 @@ if (!FileExist(UserDataRoot)) {
 	if (!FileExist(UserDataFolder)) 
 		FileCreateDir, %UserDataFolder%
 }
-
-if (!FileExist(UserDataFolder . "\abimees.ini"))
+if (!FileExist(UserDataFolder . "\abimees.ini")) {
 	if (FileExist(A_ScriptDir . "\Lib\abimees.template.ini"))
 		FileCopy, %A_ScriptDir%\Lib\abimees.template.ini, %UserDataFolder%\abimees.ini
+	MsgBox, 36, Esmane käivitus, Kas soovid luua otsetee töölauale?
+	IfMsgBox, Yes
+		FileCreateShortcut, %A_AhkPath%, %A_Desktop%\Abimees.lnk, %A_ScriptDir%, "%A_ScriptFullPath%", Esteri abimees, %A_ScriptDir%\Resources\metallic_a.ico
 
-if (!FileExist(UserDataFolder "\kiirklahvid.ahk")) {
-	if (FileExist(A_ScriptDir . "\Lib\kiirklahvid.template.ahk")) {
-		FileCopy, %A_ScriptDir%\Lib\kiirklahvid.template.ahk, %UserDataFolder%\kiirklahvid.ahk
-		Reload
-	}
-}
+	MsgBox, 36, Esmane käivitus, Kas soovid et Abimees käivitataks automaatselt sisselogimisel? (saad seda hiljem muuta paremklikkides Abimees ikooni)
+ 	IfMsgBox, Yes 
+	{
+		FileCreateShortcut, %A_AhkPath%, %A_Startup%\Abimees.lnk, %A_ScriptDir%, "%A_ScriptFullPath%", Esteri abimees, %A_ScriptDir%\Resources\metallic_a.ico
+		IniWrite, 1, %UserDataFolder%\abimees.ini, Autostart, Abimees
+	} else {
+		 IniWrite, 0, %UserDataFolder%\abimees.ini, Autostart, Abimees
+	 } 
+	Sleep, 100 ; anna natuke aega IniWrite kirjutamise jaoks, lisaks kui kiirklavid.ahk on käivitumas siis selle jaoks ka
+} 
 
 #include <GlobalVariables>
 #include <FindText>
 
 OnExit("ExitFunc")
 
-IniRead, defaultOsakond, %UserDataFolder%\abimees.ini, General, defaultOsakond, %A_Space%
-IniWrite, 0, %UserDataFolder%\abimees.ini, General, HaigusluguReady
+IniRead, defaultOsakond, %UserDataFolder%\abimees.ini, General, defaultOsakond, %A_Space% ; defaultOsakond = Esteris valitakse see automaatselt rippmenüüst
+IniWrite, 0, %UserDataFolder%\abimees.ini, General, HaigusluguReady ; vajalik Viimati vaadatud mooduliga kommunikeerimiseks
 
 ;#NoTrayIcon  ; Eemalda kommentaar kui ei soovi ikooni
 Menu, Tray, Icon, %A_ScriptDir%\Resources\metallic_a.ico
 Menu, Tray, Tip, Abimees
 Menu, Tray, NoMainWindow
 
+; loe haigusloo abimehe jaoks kiirlingid sisse
 IniRead, lingid, %UserDataFolder%\abimees.ini, Kiirlingid, kiirlingid, %A_Space%
 if (lingid && (lingid != A_Space)) {
 	lingidSplit := StrSplit(lingid,"|")
@@ -64,7 +73,7 @@ if (lingid && (lingid != A_Space)) {
 }
 
 if !ExperimentalMode {
-	CreateTrayMenu()
+	CreateTrayMenu() ; loo tray menu, mis on muutuv
 }
 
 ; Tekita shell hook mis kontrollib kas "Haiguslugu" aken on avatud; kui on siis aktiveerib Abivahendi
@@ -72,42 +81,44 @@ DllCall( "RegisterShellHookWindow", UInt, A_ScriptHwnd )
 MsgNum := DllCall( "RegisterWindowMessage", Str,"SHELLHOOK" )
 OnMessage( MsgNum, "ShellMessage" )
 
+; käivita automaatselt soovitud programmid. 
 if (autoStart.EsterStatsionaar) {
 	if (FileExist("G:\Statsionaar32\Stats.EXE"))
 		Run, G:\Statsionaar32\Stats.EXE
 }
-
 if (autoStart.EsterRegistratuur) {
 	if (FileExist("G:\Registratuur32\Registr.exe"))
 		Run, G:\Registratuur32\Registr.exe
 }
+if (autoStart.Abimees) {
+	if (!FileExist(A_Startup . "\Abimees.lnk")) 
+		FileCreateShortcut, %A_AhkPath%, %A_Startup%\Abimees.lnk, %A_ScriptDir%, "%A_ScriptFullPath%", Esteri abimees, %A_ScriptDir%\Resources\metallic_a.ico
+}
 
+; kui Ester on juba avatud siis käivita Viimati vaadatud moodul, loe Esterist valitud osakonna nimi, vajadusel muuda vaikimisi osakond
 if WinExist("Ester II Statsionaar") {
+	if (!WinExist("abimees_lastviewed.ahk ahk_class AutoHotkey") && plugins.LastViewed)
+		Run, %AHKPath% abimees_lastviewed.ahk
 	ControlGetText, currentOsakond, Edit1, Ester II Statsionaar
 	if (currentOsakond) {
 		if (!WinExist("abimees_ester.ahk ahk_class AutoHotkey") and plugins.Ester) {
 			WinActivate, Ester II Statsionaar
 			WinWaitActive, Ester II Statsionaar,,1
 			Run, %AHKPath% abimees_ester.ahk
-			
 		}
-		if (!WinExist("abimees_lastviewed.ahk ahk_class AutoHotkey") && plugins.LastViewed)
-			Run, %AHKPath% abimees_lastviewed.ahk
-		if (!WinExist(currentOsakond . " ahk_class ThunderRT6FormDC"))
+		if (!WinExist(currentOsakond . " ahk_exe stats.exe"))
 			ChangeDefaultOsakond()
 	}
 }
 
-if (!WinExist("abimees_labor.ahk ahk_class AutoHotkey") && plugins.Labor)
-	Run, %AHKPath% abimees_labor.ahk
-
-; Deprecated
+; Deprecated, kahjuks tellimused ei avane enam tavalises veebilehitsejas kuhu saaks javascripti sisestada
 ;if (!WinExist("abimees_tellimused.ahk ahk_class AutoHotkey") && plugins.Tellimused)
 ;	Run, %AHKPath% abimees_tellimused.ahk
 
 if (!WinExist("abimees_kiirklahvid.ahk ahk_class AutoHotkey") && plugins.Kiirklahvid)
 	Run, %AHKPath% abimees_kiirklahvid.ahk
 
+; loo haigusloo abimehe aknad nii stats kui ambulatoorse Esteri jaoks
 if (WinExist("Haiguslugu ahk_exe stats.exe") && plugins.Haiguslugu) {
 	WinActivate, Haiguslugu ahk_exe stats.exe
 	WinWaitActive, Haiguslugu ahk_exe stats.exe,,1
@@ -118,29 +129,46 @@ if (WinExist("Haiguslugu ahk_exe registr.exe") && plugins.Haiguslugu) {
 	WinWaitActive, Haiguslugu ahk_exe registr.exe,,1
 	CreateHaiguslooAbivahend()
 }
-return
+
+return  ; ---------- EDASI VAID FUNKTSIOONID ------------
 
 TrayMoodulHaiguslugu:
-	global HaiguslooAbivahendHwnd, UserDataFolder
+	DetectHiddenWindows, Off
+	global UserDataFolder, abimeesStats, abimeesAmb
 	if (plugins.Haiguslugu) {
 		Menu, TrayMoodulid, Uncheck, Haigusloo abimees
 		plugins.Haiguslugu := 0
 		IniWrite, 0, %UserDataFolder%\abimees.ini, Plugins, Haiguslugu
-		if (HaiguslooAbivahendHwnd)
+		if (abimeesStats.ownedAhkId) {
+			HaiguslooAbivahendHwnd := abimeesStats.ownedAhkId
 			if (WinExist("ahk_id " . HaiguslooAbivahendHwnd))
 				WinClose, ahk_id %HaiguslooAbivahendHwnd%
+		}
+		if (abimeesAmb.ownedAhkId) {
+			HaiguslooAbivahendHwnd := abimeesAmb.ownedAhkId
+			if (WinExist("ahk_id " . HaiguslooAbivahendHwnd))
+				WinClose, ahk_id %HaiguslooAbivahendHwnd%
+		}
 	} else {
 		Menu, TrayMoodulid, Check, Haigusloo abimees
 		plugins.Haiguslugu := 1
 		IniWrite, 1, %UserDataFolder%\abimees.ini, Plugins, Haiguslugu
-		if (WinExist("Haiguslugu ahk_class ThunderRT6FormDC")) {
-			if (!HaiguslooAbivahendHwnd || (HaiguslooAbivahend && (!WinExist("ahk_id " . HaiguslooAbivahendHwnd)))) {
-				WinActivate, Haiguslugu ahk_class ThunderRT6FormDC
-				WinWaitActive, Haiguslugu ahk_class ThunderRT6FormDC,,1
+		if (WinExist("Haiguslugu ahk_exe stats.exe")) {
+			if (!abimeesStats.ownedAhkId or (!WinExist("ahk_id " . abimeesStats.ownedAhkId))) {
+				WinActivate, Haiguslugu ahk_exe stats.exe
+				WinWaitActive, Haiguslugu ahk_exe stats.exe,,1
+				CreateHaiguslooAbivahend()
+			}
+		}
+		if (WinExist("Haiguslugu ahk_exe registr.exe")) {
+			if (!abimeesAmb.ownedAhkId or !WinExist("ahk_id " . abimeesAmb.ownedAhkId)) {
+				WinActivate, Haiguslugu ahk_exe registr.exe
+				WinWaitActive, Haiguslugu ahk_exe registr.exe,,1
 				CreateHaiguslooAbivahend()
 			}
 		}
 	}
+	DetectHiddenWindows, On
 	return
 	
 TrayDefaultOsakondChange:
@@ -172,6 +200,10 @@ TrayAutostartEsterStatsionaar:
 	
 TrayAutostartEsterRegistratuur:
 	TrayAutostartCheckUncheck("TrayAutostart", "EsterRegistratuur", "Ester II Registratuur")
+	return
+
+TrayAutostartAbimees:
+	TrayAutostartCheckUncheck("TrayAutostart", "Abimees", "Sisselogimisel Abimees")
 	return
 
 TrayInfo:
@@ -244,6 +276,9 @@ CreateTrayMenu() {
 	Menu, TrayAutostart, Add, Ester II Registratuur, TrayAutostartEsterRegistratuur
 	if (autoStart.EsterRegistratuur)
 		Menu, TrayAutostart, Check, Ester II Registratuur
+	Menu, TrayAutostart, Add, Sisselogimisel Abimees, TrayAutostartAbimees
+	if (autoStart.Abimees)
+		Menu, TrayAutostart, Check, Sisselogimise abimees
 	Menu, Tray, Add, Käivita automaatselt, :TrayAutostart
 		
 	Menu, Tray, Add
@@ -261,10 +296,14 @@ TrayAutostartCheckUncheck(trayName, pluginName, menuName) {
 		Menu, %trayName%, Uncheck, %menuName%
 		autoStart[pluginName] := 0
 		IniWrite, 0, %UserDataFolder%\abimees.ini, Autostart, %pluginName%
+		if (pluginName == "Abimees" && FileExist(A_Startup . "\Abimees.lnk"))
+			FileDelete, %A_Startup%\Abimees.lnk
 	} else {
 		Menu, %trayName%, Check, %menuName%
 		autoStart[pluginName] := 1
 		IniWrite, 1, %UserDataFolder%\abimees.ini, Autostart, %pluginName%
+		if (pluginName == "Abimees" && !FileExist(A_Startup . "\Abimees.lnk"))
+			FileCreateShortcut, %A_AhkPath%, %A_Startup%\Abimees.lnk, %A_ScriptDir%, "%A_ScriptFullPath%", Esteri abimees, %A_ScriptDir%\Resources\metallic_a.ico
 	}
 }
 
@@ -303,61 +342,6 @@ HasVal(haystack, needle) {
 }
 
 OnLocationChangeMonitor(_hWinEventHook, _event, _hwnd) { ; https://msdn.microsoft.com/en-us/library/windows/desktop/dd373885(v=vs.85).aspx
-	STATIC ox, oy, nx, ny, ownerAhkId, ownedAhkId, hWinEventHook
-	global resetAbimees
-	if resetAbimees
-		hWinEventHook := 0, resetAbimees := 0
-	IF !_hwnd	; if the system sent the EVENT_OBJECT_LOCATIONCHANGE event for the caret:
-		Return	; https://msdn.microsoft.com/en-us/library/windows/desktop/dd318066(v=vs.85).aspx
-	IF !hWinEventHook			; register a event hook function for EVENT_OBJECT_LOCATIONCHANGE := "0x800B"
-		hWinEventHook := SetWinEventHook("0x800B", "0x800B",0, RegisterCallback("OnLocationChangeMonitor"),_hwnd,0,0)
-		 , ownerAhkId := _hWinEventHook,   ownedAhkId := _event,   OnExit(Func("UnhookWinEvent").Bind(hWinEventHook))
-	WinGetPos,  _x,  _y, _w, _h, ahk_id %ownerAhkId%
-	WinMove, ahk_id %ownedAhkId%,, % _x+_w-10, % _y ; set the position of the window owned by owner
-}
-
-; ClassX_Callback(params*) {
-    ; return Object(A_EventInfo).OnLocationChangeMonitor(params*)
-; }
-
-; class GuiMoodul {
-	; STATIC ownerAhkId, ownedAhkId, hWinEventHook, alignment, xOffset, yOffset, callBack
-	; __New(alignment, xOffset, yOffset) {
-		; this.alignment := alignment
-		; this.xOffset := xOffset
-		; this.yOffset := yOffset
-		; this.callBack := RegisterCallback("ClassX_Callback", "", "", &this)
-	; }
-	; __Delete() {
-		; this.UnhookWinEvent(this.hWinEventHook)
-	; }
-	; OnLocationChangeMonitor(_hWinEventHook, _event, _hwnd) { ; https://msdn.microsoft.com/en-us/library/windows/desktop/dd373885(v=vs.85).aspx
-		; IF !_hwnd	; if the system sent the EVENT_OBJECT_LOCATIONCHANGE event for the caret:
-			; Return	; https://msdn.microsoft.com/en-us/library/windows/desktop/dd318066(v=vs.85).aspx
-		; IF (!(this.hWinEventHook)) {			; register a event hook function for EVENT_OBJECT_LOCATIONCHANGE := "0x800B"
-			; this.hWinEventHook := this.SetWinEventHook("0x800B", "0x800B",0, RegisterCallback("ClassX_Callback", "", "", &this),_hwnd,0,0)
-			; this.ownerAhkId := _hWinEventHook
-			; this.ownedAhkId := _event
-		; }
-		; WinGetPos,  _x,  _y, _w, _h, ahk_id %ownerAhkId%
-		; switch (this.alignment) {
-			; case "right":
-				; WinMove, ahk_id %ownedAhkId%,, % _x+_w+this.xOffset, % _y+this.yOffset ; set the position of the window owned by owner
-			; case "bottom":
-				; WinMove, ahk_id %ownedAhkId%,, % _x+this.xOffset, % _y+_h+this.yOffset ; set the position of the window owned by owner
-		; }
-	; }
-	; SetWinEventHook(_eventMin, _eventMax, _hmodWinEventProc, _lpfnWinEventProc, _idProcess, _idThread, _dwFlags) {
-		; DllCall("CoInitialize", "Uint", 0)
-		; return DllCall("SetWinEventHook","Uint",_eventMin,"Uint",_eventMax,"Ptr",_hmodWinEventProc,"Ptr",_lpfnWinEventProc,"Uint",_idProcess,"Uint",_idThread,"Uint",_dwFlags)
-	; }  ; cf. https://autohotkey.com/boards/viewtopic.php?t=830
-	; UnhookWinEvent(_hWinEventHook) {
-		; DllCall("UnhookWinEvent", "Ptr", _hWinEventHook)
-		; DllCall("CoUninitialize")
-	; }  ; cf. https://autohotkey.com/boards/viewtopic.php?t=830
-; } 
-
-OnLocationChangeMonitor2(_hWinEventHook, _event, _hwnd) { ; https://msdn.microsoft.com/en-us/library/windows/desktop/dd373885(v=vs.85).aspx
 	IF !_hwnd	; if the system sent the EVENT_OBJECT_LOCATIONCHANGE event for the caret:
 		Return	; https://msdn.microsoft.com/en-us/library/windows/desktop/dd318066(v=vs.85).aspx
 
@@ -369,7 +353,7 @@ OnLocationChangeMonitor2(_hWinEventHook, _event, _hwnd) { ; https://msdn.microso
 	StringLower, wExe, wExe
 	if (InStr(ownerTitle, "Haiguslugu") && wExe == "stats.exe") {
 		IF (!(abimeesStats.hWinEventHook)) {			; register a event hook function for EVENT_OBJECT_LOCATIONCHANGE := "0x800B" 
-			abimeesStats.hWinEventHook := SetWinEventHook("0x800B", "0x800B",0, RegisterCallback("OnLocationChangeMonitor2"),_hwnd,0,0)
+			abimeesStats.hWinEventHook := SetWinEventHook("0x800B", "0x800B",0, RegisterCallback("OnLocationChangeMonitor"),_hwnd,0,0)
 			,abimeesStats.ownerAhkId := _hWinEventHook, abimeesStats.ownedAhkId := _event
 		}
 		ownerId := abimeesStats.ownerAhkId, ownedId := abimeesStats.ownedAhkId
@@ -377,7 +361,7 @@ OnLocationChangeMonitor2(_hWinEventHook, _event, _hwnd) { ; https://msdn.microso
 		WinMove, ahk_id %ownedId%,, % _x+_w-10, % _y ; set the position of the window owned by owner
 	} else if (InStr(ownerTitle, "Haiguslugu") && wExe == "registr.exe") {
 		IF (!(abimeesAmb.hWinEventHook)) {			; register a event hook function for EVENT_OBJECT_LOCATIONCHANGE := "0x800B" 
-			abimeesAmb.hWinEventHook := SetWinEventHook("0x800B", "0x800B",0, RegisterCallback("OnLocationChangeMonitor2"),_hwnd,0,0)
+			abimeesAmb.hWinEventHook := SetWinEventHook("0x800B", "0x800B",0, RegisterCallback("OnLocationChangeMonitor"),_hwnd,0,0)
 			,abimeesAmb.ownerAhkId := _hWinEventHook, abimeesAmb.ownedAhkId := _event
 		}
 		ownerId := abimeesAmb.ownerAhkId, ownedId := abimeesAmb.ownedAhkId
@@ -396,20 +380,6 @@ OnLocationChangeMonitor2(_hWinEventHook, _event, _hwnd) { ; https://msdn.microso
 		WinGetPos,  _x,  _y, _w, _h, Kirjelduse sisestamine ahk_id %ownerId%
 		WinMove, ahk_id %ownedId%,, % _x+8, % _y+_h-8 ; set the position of the window owned by owner
 	}
-}
-
-OnLocationChangeMonitorOtsing(_hWinEventHook, _event, _hwnd) { ; https://msdn.microsoft.com/en-us/library/windows/desktop/dd373885(v=vs.85).aspx
-	STATIC ox, oy, nx, ny, ownerAhkId, ownedAhkId, hWinEventHook
-	global resetOtsing
-	if resetOtsing
-		hWinEventHook := 0, resetOtsing := 0
-	IF !_hwnd	; if the system sent the EVENT_OBJECT_LOCATIONCHANGE event for the caret:
-		Return	; https://msdn.microsoft.com/en-us/library/windows/desktop/dd318066(v=vs.85).aspx
-	IF !hWinEventHook			; register a event hook function for EVENT_OBJECT_LOCATIONCHANGE := "0x800B" 
-		hWinEventHook := SetWinEventHook("0x800B", "0x800B",0, RegisterCallback("OnLocationChangeMonitorOtsing"),_hwnd,0,0)
-		 , ownerAhkId := _hWinEventHook,   ownedAhkId := _event,   OnExit(Func("UnhookWinEvent").Bind(hWinEventHook))
-	WinGetPos,  _x,  _y, _w, _h, ahk_id %ownerAhkId%
-	WinMove, ahk_id %ownedAhkId%,, % _x+8, % _y+_h-8 ; set the position of the window owned by owner
 }
 
 SetWinEventHook(_eventMin, _eventMax, _hmodWinEventProc, _lpfnWinEventProc, _idProcess, _idThread, _dwFlags) {
@@ -837,97 +807,107 @@ ExitFunc(ExitReason, ExitCode) {
 		WinGet, winID, ID, %winTitle%
 		WinGet, winExe, ProcessName, %winTitle%
 		StringLower, winExe, winExe
-		if !(winExe == "stats.exe" || "registr.exe")
-			return
-		
-		if InStr(winTitle, "Korrusvaade") or InStr(winTitle, currentOsakond) or InStr(winTitle, "Palatiosakond") {
-			ControlGetPos, ctrlX, ctrlY, ctrlW, ctrlH, SPR32X30_SpreadSheet1, A	
-			if !((currentMouseyPos > ctrlY && currentMouseyPos < (ctrlY+ctrlH-45)) && (currentMousexPos > ctrlX && currentMousexPos < (ctrlX+ctrlW-20)))
-				return
-			Sleep, 150 ; Oota veidi, muidu mõnikord ei avane valikudialoogi ja hakkab kleebiseid trükkima
-			SetControlDelay -1 ; muudab ControlClicki usaldusväärsemaks
-			if InStr(winTitle, "Palatiosakond") {
-				ControlClick, ThunderRT6CommandButton9, %currentOsakond% ahk_exe %winExe%,,,, NA 
-			} else {
-				ControlClick, ThunderRT6CommandButton21, %currentOsakond% ahk_exe %winExe%,,,, NA 
-			}
-			Sleep, 150
-			Send, k
-			;WaitTextExist("AvaHaigusluguMenu",,,,,,0)
-		} else if InStr(winTitle, "Haiguslugu") {
-			PixelGetColor, color, currentMousexPos, currentMouseyPos
-			ControlGetPos, ctrlX, ctrlY, ctrlW, ctrlH, SPR32X30_SpreadSheet1, A
-			ctrlX := ctrlX - 8 ; Control vs Window koordinaadid erinevad, korrektsioon
-			ctrlY := ctrlY - 16
-			; Kontrolli kas hiir asub valikute kastis
-			if ((currentMouseyPos > ctrlY && currentMouseyPos < (ctrlY+ctrlH-31)) && (currentMousexPos > ctrlX && currentMousexPos < (ctrlX+ctrlW-20))) {
-				Sleep, 200 ; Oota veidi et rida saaks valitud
-				SetControlDelay -1 ; muudab ControlClicki usaldusväärsemaks
-				ControlGetText, selectedText, SPR32X30EditHScroll1, Haiguslugu ahk_exe %winExe%
-				if (InStr("Anamnees,Ravipäevik,Konsultatsiooni otsus", Trim(selectedText))) {
-					if WinExist("Kirjelduse sisestamine ahk_exe " . winExe) {
-						WinActivate, Kirjelduse sisestamine ahk_exe %winExe%
-						MsgBox, 51, Hoiatus, "Kirjelduse sisestamine" aken on juba avatud. Kas soovid enne jätkamist eelneva teksti salvestada?
-						IfMsgBox, Yes 
-						{
-							ControlClick, ThunderRT6CommandButton3, Kirjelduse sisestamine ahk_exe %winExe%,,,,NA
-						} else {
-							IfMsgBox, No
-								ControlClick, ThunderRT6CommandButton4, Kirjelduse sisestamine ahk_exe %winExe%,,,,NA
-							else 
-								return
-						}
-						WinActivate, Haiguslugu ahk_exe %winExe%
-					}
-				}
-				ControlClick, % (winExe == "stats.exe") ? "ThunderRT6CommandButton33" : "ThunderRT6CommandButton20", Haiguslugu ahk_exe %winExe%,,,, NA ; kliki Täpsemalt nupule
-				WinWaitNotActive, ahk_id %winID%,,1
-				if ErrorLevel
+		SetControlDelay -1
+
+		if (winExe == "stats.exe" || winExe == "registr.exe") {
+			if InStr(winTitle, "Korrusvaade") or InStr(winTitle, currentOsakond) or InStr(winTitle, "Palatiosakond") {
+				ControlGetPos, ctrlX, ctrlY, ctrlW, ctrlH, SPR32X30_SpreadSheet1, A	
+				if !((currentMouseyPos > ctrlY && currentMouseyPos < (ctrlY+ctrlH-45)) && (currentMousexPos > ctrlX && currentMousexPos < (ctrlX+ctrlW-20)))
 					return
-				Sleep,40
-				WinGetActiveTitle, newWinTitle
-				WinGet, newWinID, ID, %newWinTitle%
-				if InStr(newWinTitle, "Haiguslugu") {
-					ControlGetText, noBut, Button2, Haiguslugu ahk_exe %winExe%
-					if (noBut == "&No") {
-						ControlClick, Button2, Haiguslugu ahk_exe %winExe%,,,, NA
-						WinWaitNotActive, ahk_id %newWinID%,,1
-						WinGetActiveTitle, newWinTitle
-						WinGet, newWinID, ID, %newWinTitle%
+				Sleep, 150 ; Oota veidi, muidu mõnikord ei avane valikudialoogi ja hakkab kleebiseid trükkima
+				SetControlDelay -1 ; muudab ControlClicki usaldusväärsemaks
+				if InStr(winTitle, "Palatiosakond") {
+					ControlClick, ThunderRT6CommandButton9, %currentOsakond% ahk_exe %winExe%,,,, NA 
+				} else {
+					ControlClick, ThunderRT6CommandButton21, %currentOsakond% ahk_exe %winExe%,,,, NA 
+				}
+				Sleep, 150
+				Send, k
+				;WaitTextExist("AvaHaigusluguMenu",,,,,,0)
+			} else if (InStr(winTitle, "Vastuvõtuosakond") || InStr(winTitle, "jälgimisel olevad")) {
+				ControlGetPos, ctrlX, ctrlY, ctrlW, ctrlH, SPR32X30_SpreadSheet1, A
+				ctrlX := ctrlX - 8 ; Control vs Window koordinaadid erinevad, korrektsioon
+				ctrlY := ctrlY - 16
+				; Kontrolli kas hiir asub valikute kastis
+				if ((currentMouseyPos > ctrlY && currentMouseyPos < (ctrlY+ctrlH-31)) && (currentMousexPos > ctrlX && currentMousexPos < (ctrlX+ctrlW-20))) {
+					SetControlDelay -1
+					ControlClick, ThunderRT6CommandButton24, Vastuvõtuosakond ahk_exe %winExe%,,,, NA
+				}
+			} else if InStr(winTitle, "Haiguslugu") {
+				PixelGetColor, color, currentMousexPos, currentMouseyPos
+				ControlGetPos, ctrlX, ctrlY, ctrlW, ctrlH, SPR32X30_SpreadSheet1, A
+				ctrlX := ctrlX - 8 ; Control vs Window koordinaadid erinevad, korrektsioon
+				ctrlY := ctrlY - 16
+				; Kontrolli kas hiir asub valikute kastis
+				if ((currentMouseyPos > ctrlY && currentMouseyPos < (ctrlY+ctrlH-31)) && (currentMousexPos > ctrlX && currentMousexPos < (ctrlX+ctrlW-20))) {
+					Sleep, 200 ; Oota veidi et rida saaks valitud
+					SetControlDelay -1 ; muudab ControlClicki usaldusväärsemaks
+					ControlGetText, selectedText, SPR32X30EditHScroll1, Haiguslugu ahk_exe %winExe%
+					if (InStr("Anamnees,Ravipäevik,Konsultatsiooni otsus", Trim(selectedText))) {
+						if WinExist("Kirjelduse sisestamine ahk_exe " . winExe) {
+							WinActivate, Kirjelduse sisestamine ahk_exe %winExe%
+							MsgBox, 51, Hoiatus, "Kirjelduse sisestamine" aken on juba avatud. Kas soovid enne jätkamist eelneva teksti salvestada?
+							IfMsgBox, Yes 
+							{
+								ControlClick, ThunderRT6CommandButton3, Kirjelduse sisestamine ahk_exe %winExe%,,,,NA
+							} else {
+								IfMsgBox, No
+									ControlClick, ThunderRT6CommandButton4, Kirjelduse sisestamine ahk_exe %winExe%,,,,NA
+								else 
+									return
+							}
+							WinActivate, Haiguslugu ahk_exe %winExe%
+						}
+					}
+					ControlClick, % (winExe == "stats.exe") ? "ThunderRT6CommandButton33" : "ThunderRT6CommandButton20", Haiguslugu ahk_exe %winExe%,,,, NA ; kliki Täpsemalt nupule
+					WinWaitNotActive, ahk_id %winID%,,1
+					if ErrorLevel
+						return
+					Sleep,40
+					WinGetActiveTitle, newWinTitle
+					WinGet, newWinID, ID, %newWinTitle%
+					if InStr(newWinTitle, "Haiguslugu") {
+						ControlGetText, noBut, Button2, Haiguslugu ahk_exe %winExe%
+						if (noBut == "&No") {
+							ControlClick, Button2, Haiguslugu ahk_exe %winExe%,,,, NA
+							WinWaitNotActive, ahk_id %newWinID%,,1
+							WinGetActiveTitle, newWinTitle
+							WinGet, newWinID, ID, %newWinTitle%
+						}
+					}
+					;if InStr(newWinTitle, "Kirjelduse sisestamine") {
+					;	Send, ^{End}
+					if InStr(newWinTitle, "Labor") {
+						WaitControlVisible("ThunderRT6CheckBox3","Labor ahk_exe " . winExe, 3000)
+						ControlClick, % (winExe == "stats.exe") ? "ThunderRT6CheckBox3" : "ThunderRT6CheckBox2", Labor ahk_exe %winExe%,,,, NA
 					}
 				}
-				;if InStr(newWinTitle, "Kirjelduse sisestamine") {
-				;	Send, ^{End}
-				if InStr(newWinTitle, "Labor") {
-					WaitControlVisible("ThunderRT6CheckBox3","Labor ahk_exe " . winExe, 3000)
-					ControlClick, % (winExe == "stats.exe") ? "ThunderRT6CheckBox3" : "ThunderRT6CheckBox2", Labor ahk_exe %winExe%,,,, NA
-				}
-			}
-		} else if InStr(winTitle, "Labor") {
-			ControlGet, SS1, Visible,, SPR32X30_SpreadSheet1, A 
-			if (SS1)
-				ControlGetPos, ctrlX, ctrlY, ctrlW, ctrlH, SPR32X30_SpreadSheet1, A ; Kõikide proovide tabel
-			else
-				ControlGetPos, ctrlX, ctrlY, ctrlW, ctrlH, SPR32X30_SpreadSheet2, A ; Ühe proovi analüüside tabel
-			ctrlY := ctrlY - 30
-			PixelGetColor, color, currentMousexPos, currentMouseyPos
-			if ((currentMouseyPos > ctrlY && currentMouseyPos < (ctrlY+ctrlH-15)) && (currentMousexPos > ctrlX && currentMousexPos < (ctrlX+ctrlW-20))) {
-				SetControlDelay -1 ; muudab ControlClicki usaldusväärsemaks
+			} else if InStr(winTitle, "Labor") {
+				ControlGet, SS1, Visible,, SPR32X30_SpreadSheet1, A 
 				if (SS1)
-					ControlClick, ThunderRT6CheckBox3, Labor ahk_exe %winExe%,,,, NA ; kliki Filtreeri
+					ControlGetPos, ctrlX, ctrlY, ctrlW, ctrlH, SPR32X30_SpreadSheet1, A ; Kõikide proovide tabel
 				else
-					ControlClick, ThunderRT6CommandButton17, Labor ahk_exe %winExe%,,,, NA ; kliki Areng
-			}
-		} else if InStr(winTitle, "Valimine tabelist ISIK,AADRESSID,asukohad") {
-			ControlGetPos, ctrlX, ctrlY, ctrlW, ctrlH, SPR32X30_SpreadSheet1, A
-			ctrlX := ctrlX - 8
-			ctrlY := ctrlY - 32
-			PixelGetColor, color, currentMousexPos, currentMouseyPos
-			if ((currentMouseyPos > ctrlY && currentMouseyPos < (ctrlY+ctrlH-15)) && (currentMousexPos > ctrlX && currentMousexPos < (ctrlX+ctrlW-20))) {
-				SetControlDelay -1
-				ControlClick, ThunderRT6CommandButton8, Valimine tabelist ISIK ahk_exe %winExe%,,,, NA ; valib patsiendi Patsiendi aknasse
-				Sleep, 300
-				ControlClick, ThunderRT6CommandButton3, Patsient ahk_exe %winExe%,,,, NA ; avab valitud patsiendi
+					ControlGetPos, ctrlX, ctrlY, ctrlW, ctrlH, SPR32X30_SpreadSheet2, A ; Ühe proovi analüüside tabel
+				ctrlY := ctrlY - 30
+				PixelGetColor, color, currentMousexPos, currentMouseyPos
+				if ((currentMouseyPos > ctrlY && currentMouseyPos < (ctrlY+ctrlH-15)) && (currentMousexPos > ctrlX && currentMousexPos < (ctrlX+ctrlW-20))) {
+					SetControlDelay -1 ; muudab ControlClicki usaldusväärsemaks
+					if (SS1)
+						ControlClick, ThunderRT6CheckBox3, Labor ahk_exe %winExe%,,,, NA ; kliki Filtreeri
+					else
+						ControlClick, ThunderRT6CommandButton17, Labor ahk_exe %winExe%,,,, NA ; kliki Areng
+				}
+			} else if InStr(winTitle, "Valimine tabelist ISIK,AADRESSID,asukohad") {
+				ControlGetPos, ctrlX, ctrlY, ctrlW, ctrlH, SPR32X30_SpreadSheet1, A
+				ctrlX := ctrlX - 8
+				ctrlY := ctrlY - 32
+				PixelGetColor, color, currentMousexPos, currentMouseyPos
+				if ((currentMouseyPos > ctrlY && currentMouseyPos < (ctrlY+ctrlH-15)) && (currentMousexPos > ctrlX && currentMousexPos < (ctrlX+ctrlW-20))) {
+					SetControlDelay -1
+					ControlClick, ThunderRT6CommandButton8, Valimine tabelist ISIK ahk_exe %winExe%,,,, NA ; valib patsiendi Patsiendi aknasse
+					Sleep, 300
+					ControlClick, ThunderRT6CommandButton3, Patsient ahk_exe %winExe%,,,, NA ; avab valitud patsiendi
+				}
 			}
 		} else if (winExe == "digilugu.klient.exe") {
 			SetControlDelay -1 ; muudab ControlClicki usaldusväärsemaks
